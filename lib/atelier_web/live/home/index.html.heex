@@ -1,14 +1,22 @@
 <div class="p-12">
   <div class="w-full flex justify-between">
     <div />
-    <.theme_selector />
+    <.theme_selector preview_only />
   </div>
 
   <.form for={@form} phx-submit="save">
     <div class="tabs tabs-lift">
       <input type="radio" name="view_tabs" class="tab" aria-label="Preview" checked="checked" />
       <div class="tab-content border-base-300 bg-base-100 p-6">
-        {raw(@preview_html)}
+        <iframe
+          :if={@preview_document != ""}
+          srcdoc={@preview_document}
+          class="w-full min-h-64 border-0 rounded-lg"
+          sandbox="allow-scripts allow-same-origin"
+        />
+        <p :if={@preview_document == ""} class="text-base-content/50">
+          Enter HTML in the HTML tab and click Update Preview.
+        </p>
       </div>
 
       <input type="radio" name="view_tabs" class="tab" aria-label="HTML" />

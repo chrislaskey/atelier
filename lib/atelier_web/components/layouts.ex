@@ -141,22 +141,41 @@ defmodule AtelierWeb.Layouts do
   """
   attr :themes, :list, default: @themes
 
+  attr :preview_only, :boolean,
+    default: false,
+    doc: "when true, only changes the preview iframe theme"
+
   def theme_selector(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :controller_class,
+        if(assigns.preview_only, do: "preview-theme", else: "theme-controller")
+      )
+
     ~H"""
     <div class="dropdown dropdown-end">
       <div tabindex="0" role="button" class="btn btn-ghost">
-        <.icon name="hero-swatch-micro" class="size-4" />
-        Theme
-        <svg width="12px" height="12px" class="inline-block h-2 w-2 fill-current opacity-60" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048">
+        <.icon name="hero-swatch-micro" class="size-4" /> Theme
+        <svg
+          width="12px"
+          height="12px"
+          class="inline-block h-2 w-2 fill-current opacity-60"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 2048 2048"
+        >
           <path d="M1799 349l242 241-1017 1017L7 590l242-241 775 775 775-775z"></path>
         </svg>
       </div>
-      <ul tabindex="0" class="dropdown-content bg-base-300 rounded-box z-10 w-52 p-2 shadow-2xl max-h-80 overflow-y-auto">
+      <ul
+        tabindex="0"
+        class="dropdown-content bg-base-300 rounded-box z-10 w-52 p-2 shadow-2xl max-h-80 overflow-y-auto"
+      >
         <li :for={theme <- @themes}>
           <input
             type="radio"
             name="theme-dropdown"
-            class="theme-controller w-full btn btn-sm btn-block btn-ghost justify-start"
+            class={[@controller_class, "w-full btn btn-sm btn-block btn-ghost justify-start"]}
             aria-label={String.capitalize(theme)}
             value={theme}
           />

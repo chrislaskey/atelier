@@ -26,12 +26,25 @@
           }
         });
 
-        // Persist theme on radio change
+        // Persist theme on radio change and sync to iframes
         document.addEventListener("change", (e) => {
           if (e.target.classList.contains("theme-controller")) {
             const theme = e.target.value;
             localStorage.setItem("phx:theme", theme);
             document.documentElement.setAttribute("data-theme", theme);
+            document.querySelectorAll("iframe").forEach((f) => {
+              f.contentWindow?.postMessage({type: "theme-change", theme: theme}, "*");
+            });
+          }
+        });
+
+        // Preview-only theme selector: only updates iframes
+        document.addEventListener("change", (e) => {
+          if (e.target.classList.contains("preview-theme")) {
+            const theme = e.target.value;
+            document.querySelectorAll("iframe").forEach((f) => {
+              f.contentWindow?.postMessage({type: "theme-change", theme: theme}, "*");
+            });
           }
         });
 

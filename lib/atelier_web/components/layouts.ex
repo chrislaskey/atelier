@@ -51,7 +51,7 @@ defmodule AtelierWeb.Layouts do
             <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
           </li>
           <li>
-            <.theme_toggle />
+            <.theme_selector />
           </li>
           <li>
             <a href="https://hexdocs.pm/phoenix/overview.html" class="btn btn-primary">
@@ -115,39 +115,53 @@ defmodule AtelierWeb.Layouts do
     """
   end
 
+  @themes [
+    "light",
+    "dark",
+    "retro",
+    "cyberpunk",
+    "valentine",
+    "aqua",
+    "dracula",
+    "nord",
+    "synthwave",
+    "night",
+    "coffee",
+    "forest",
+    "cupcake",
+    "pastel",
+    "caramellatte",
+    "sunset"
+  ]
+
   @doc """
-  Provides dark vs light theme toggle based on themes defined in app.css.
+  Provides a dropdown theme selector based on themes defined in app.css.
 
   See <head> in root.html.heex which applies the theme before page load.
   """
-  def theme_toggle(assigns) do
+  attr :themes, :list, default: @themes
+
+  def theme_selector(assigns) do
     ~H"""
-    <div class="card relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full">
-      <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
-
-      <button
-        class="flex p-2 cursor-pointer w-1/3"
-        phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="system"
-      >
-        <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
-      </button>
-
-      <button
-        class="flex p-2 cursor-pointer w-1/3"
-        phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="light"
-      >
-        <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
-      </button>
-
-      <button
-        class="flex p-2 cursor-pointer w-1/3"
-        phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="dark"
-      >
-        <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
-      </button>
+    <div class="dropdown dropdown-end">
+      <div tabindex="0" role="button" class="btn btn-ghost">
+        <.icon name="hero-swatch-micro" class="size-4" />
+        Theme
+        <svg width="12px" height="12px" class="inline-block h-2 w-2 fill-current opacity-60" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048">
+          <path d="M1799 349l242 241-1017 1017L7 590l242-241 775 775 775-775z"></path>
+        </svg>
+      </div>
+      <ul tabindex="0" class="dropdown-content bg-base-300 rounded-box z-10 w-52 p-2 shadow-2xl max-h-80 overflow-y-auto">
+        <li :for={theme <- @themes}>
+          <input
+            type="radio"
+            name="theme-dropdown"
+            class="theme-controller w-full btn btn-sm btn-block btn-ghost justify-start"
+            aria-label={String.capitalize(theme)}
+            value={theme}
+          />
+        </li>
+      </ul>
     </div>
     """
   end

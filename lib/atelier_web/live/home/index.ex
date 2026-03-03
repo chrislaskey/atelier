@@ -1,6 +1,8 @@
 defmodule AtelierWeb.Live.Home.Index do
   use AtelierWeb, :live_view
 
+  import AtelierWeb.Layouts
+
   alias AtelierWeb.Live.Home.Index.Schema
 
   @impl true

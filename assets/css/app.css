@@ -91,6 +91,22 @@
   --noise: 0;
 }
 
+/* Additional built-in daisyUI themes */
+@plugin "../vendor/daisyui-theme" { name: "retro"; }
+@plugin "../vendor/daisyui-theme" { name: "cyberpunk"; }
+@plugin "../vendor/daisyui-theme" { name: "valentine"; }
+@plugin "../vendor/daisyui-theme" { name: "aqua"; }
+@plugin "../vendor/daisyui-theme" { name: "dracula"; }
+@plugin "../vendor/daisyui-theme" { name: "nord"; }
+@plugin "../vendor/daisyui-theme" { name: "synthwave"; }
+@plugin "../vendor/daisyui-theme" { name: "night"; }
+@plugin "../vendor/daisyui-theme" { name: "coffee"; }
+@plugin "../vendor/daisyui-theme" { name: "forest"; }
+@plugin "../vendor/daisyui-theme" { name: "cupcake"; }
+@plugin "../vendor/daisyui-theme" { name: "pastel"; }
+@plugin "../vendor/daisyui-theme" { name: "caramellatte"; }
+@plugin "../vendor/daisyui-theme" { name: "sunset"; }
+
 /* Add variants based on LiveView classes */
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);

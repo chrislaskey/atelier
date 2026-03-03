@@ -12,21 +12,37 @@
     </script>
     <script>
       (() => {
-        const setTheme = (theme) => {
-          if (theme === "system") {
-            localStorage.removeItem("phx:theme");
-            document.documentElement.removeAttribute("data-theme");
-          } else {
+        const saved = localStorage.getItem("phx:theme");
+        if (saved) {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+
+        // When DOM is ready, sync the radio button to match the saved theme
+        document.addEventListener("DOMContentLoaded", () => {
+          const saved = localStorage.getItem("phx:theme");
+          if (saved) {
+            const radio = document.querySelector(`input.theme-controller[value="${saved}"]`);
+            if (radio) radio.checked = true;
+          }
+        });
+
+        // Persist theme on radio change
+        document.addEventListener("change", (e) => {
+          if (e.target.classList.contains("theme-controller")) {
+            const theme = e.target.value;
             localStorage.setItem("phx:theme", theme);
             document.documentElement.setAttribute("data-theme", theme);
           }
-        };
-        if (!document.documentElement.hasAttribute("data-theme")) {
-          setTheme(localStorage.getItem("phx:theme") || "system");
-        }
-        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
-        
-        window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
+        });
+
+        // Multi-tab sync
+        window.addEventListener("storage", (e) => {
+          if (e.key === "phx:theme" && e.newValue) {
+            document.documentElement.setAttribute("data-theme", e.newValue);
+            const radio = document.querySelector(`input.theme-controller[value="${e.newValue}"]`);
+            if (radio) radio.checked = true;
+          }
+        });
       })();
     </script>
   </head>

@@ -17,7 +17,7 @@ defmodule AtelierWeb.Router do
   scope "/", AtelierWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", Live.Home.Index
   end
 
   # Other scopes may use custom stacks.

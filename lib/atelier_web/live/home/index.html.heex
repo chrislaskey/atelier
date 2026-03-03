@@ -1,23 +1,27 @@
 <div class="p-12">
-  <div class="tabs tabs-lift">
-    <input type="radio" name="view_tabs" class="tab" aria-label="Preview" checked="checked" />
-    <div class="tab-content border-base-300 bg-base-100 p-6">
-      Preview
+  <.form for={@form} phx-submit="save">
+    <div class="tabs tabs-lift">
+      <input type="radio" name="view_tabs" class="tab" aria-label="Preview" checked="checked" />
+      <div class="tab-content border-base-300 bg-base-100 p-6">
+        {raw(@preview_html)}
+      </div>
+
+      <input type="radio" name="view_tabs" class="tab" aria-label="HTML" />
+      <div class="tab-content border-base-300 bg-base-100 p-6">
+        <.input type="textarea" field={@form[:html]} />
+      </div>
+
+      <input type="radio" name="view_tabs" class="tab" aria-label="Elixir" />
+      <div class="tab-content border-base-300 bg-base-100 p-6">
+        Elixir
+      </div>
+
+      <input type="radio" name="view_tabs" class="tab" aria-label="JSX" />
+      <div class="tab-content border-base-300 bg-base-100 p-6">
+        JSX
+      </div>
     </div>
 
-    <input type="radio" name="view_tabs" class="tab" aria-label="HTML" />
-    <div class="tab-content border-base-300 bg-base-100 p-6">
-      HTML
-    </div>
-
-    <input type="radio" name="view_tabs" class="tab" aria-label="Elixir" />
-    <div class="tab-content border-base-300 bg-base-100 p-6">
-      Elixir
-    </div>
-
-    <input type="radio" name="view_tabs" class="tab" aria-label="JSX" />
-    <div class="tab-content border-base-300 bg-base-100 p-6">
-      JSX
-    </div>
-  </div>
+    <button type="submit" class="btn btn-primary mt-4">Update Preview</button>
+  </.form>
 </div>

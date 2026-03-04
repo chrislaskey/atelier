@@ -1,10 +1,13 @@
 <div class="p-12">
-  <div class="w-full flex justify-between">
+  <div class="w-full flex justify-between items-center mb-4">
     <div />
-    <.theme_selector preview_only />
+    <div class="flex items-center gap-4">
+      <.input type="select" field={@form[:model]} form="component-form" options={Schema.models()} />
+      <.theme_selector preview_only />
+    </div>
   </div>
 
-  <.form for={@form} phx-submit="save">
+  <.form for={@form} phx-submit="save" id="component-form">
     <div class="tabs tabs-lift">
       <input type="radio" name="view_tabs" class="tab" aria-label="Preview" checked="checked" />
       <div class="tab-content border-base-300 bg-base-100 p-6">
@@ -15,18 +18,41 @@
           sandbox="allow-scripts allow-same-origin"
         />
         <p :if={@preview_document == ""} class="text-base-content/50">
-          Enter HTML in the HTML tab and click Update Preview.
+          No element yet. Get started with a prompt
         </p>
+      </div>
+
+      <input type="radio" name="view_tabs" class="tab" aria-label="Prompt" />
+      <div class="tab-content border-base-300 bg-base-100 p-6">
+        <.input type="textarea" field={@form[:prompt]} placeholder={if @preview_document == "", do: "Describe what you want to make", else: "Describe what you want to update"}/>
+        <div class="mt-4">
+          <button type="submit" name="source" value="prompt" class="btn btn-primary">
+            <span :if={@loading != nil} class="loading loading-spinner loading-sm"></span>
+            Update
+          </button>
+        </div>
       </div>
 
       <input type="radio" name="view_tabs" class="tab" aria-label="HTML" />
       <div class="tab-content border-base-300 bg-base-100 p-6">
         <.input type="textarea" field={@form[:html]} />
+        <div class="mt-4">
+          <button type="submit" name="source" value="html" class="btn btn-primary">
+            <span :if={@loading == :elixir} class="loading loading-spinner loading-sm"></span>
+            Update
+          </button>
+        </div>
       </div>
 
       <input type="radio" name="view_tabs" class="tab" aria-label="Elixir" />
       <div class="tab-content border-base-300 bg-base-100 p-6">
-        Elixir
+        <.input type="textarea" field={@form[:elixir]} />
+        <div class="mt-4">
+          <button type="submit" name="source" value="elixir" class="btn btn-primary">
+            <span :if={@loading == :html} class="loading loading-spinner loading-sm"></span>
+            Update
+          </button>
+        </div>
       </div>
 
       <input type="radio" name="view_tabs" class="tab" aria-label="JSX" />
@@ -34,7 +60,11 @@
         JSX
       </div>
     </div>
-
-    <button type="submit" class="btn btn-primary mt-4">Update Preview</button>
   </.form>
+
+  <div :if={@loading} class="flex items-center gap-2 my-6 p-10 text-lg text-base-content/70 rounded-lg border border-gray-300">
+    <.icon name="hero-sparkles" class="size-6 text-yellow-500 shrink-0" />
+    <span :if={@loading == :elixir}>Generating Elixir...</span>
+    <span :if={@loading == :html}>Generating HTML...</span>
+  </div>
 </div>

@@ -20,6 +20,10 @@ if System.get_env("PHX_SERVER") do
   config :atelier, AtelierWeb.Endpoint, server: true
 end
 
+if api_key = System.get_env("ANTHROPIC_API_KEY") do
+  config :atelier, :anthropic_api_key, api_key
+end
+
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||

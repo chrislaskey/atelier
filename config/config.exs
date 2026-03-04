@@ -9,7 +9,8 @@ import Config
 
 config :atelier,
   ecto_repos: [Atelier.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  ai_client: Atelier.AI.Client
 
 # Configures the endpoint
 config :atelier, AtelierWeb.Endpoint,

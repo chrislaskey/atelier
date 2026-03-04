@@ -12,7 +12,7 @@ defmodule AtelierWeb.Live.Home.Index do
       |> Schema.changeset(%{})
       |> to_form()
 
-    {:ok, assign(socket, form: form, preview_document: "", loading: nil)}
+    {:ok, assign(socket, form: form, preview_document: "", loading: nil, history: [], history_index: 0)}
   end
 
   @impl true
@@ -63,10 +63,48 @@ defmodule AtelierWeb.Live.Home.Index do
     end
   end
 
+  def handle_event("restore-history", %{"entries" => entries}, socket) when is_list(entries) do
+    history = Enum.take(entries, 10)
+
+    case history do
+      [latest | _] ->
+        form = build_form_from_snapshot(latest)
+        preview = build_preview_document(latest["html"] || "")
+
+        {:noreply,
+         assign(socket,
+           history: history,
+           history_index: 0,
+           form: form,
+           preview_document: preview
+         )}
+
+      [] ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("select-snapshot", %{"index" => index_str}, socket) do
+    index = String.to_integer(index_str)
+    snapshot = Enum.at(socket.assigns.history, index)
+
+    if snapshot do
+      form = build_form_from_snapshot(snapshot)
+      preview = build_preview_document(snapshot["html"] || "")
+      {:noreply, assign(socket, form: form, preview_document: preview, history_index: index)}
+    else
+      {:noreply, socket}
+    end
+  end
+
   @impl true
   def handle_async(:generate_elixir, {:ok, {:ok, result}}, socket) do
     form = update_form_field(socket.assigns.form, :elixir, result)
-    {:noreply, assign(socket, form: form, loading: nil)}
+
+    {:noreply,
+     socket
+     |> assign(form: form, loading: nil)
+     |> push_snapshot()}
   end
 
   def handle_async(:generate_elixir, {:ok, {:error, reason}}, socket) do
@@ -106,7 +144,9 @@ defmodule AtelierWeb.Live.Home.Index do
     form = update_form_field(socket.assigns.form, :html, result)
 
     {:noreply,
-     assign(socket, form: form, preview_document: build_preview_document(result), loading: nil)}
+     socket
+     |> assign(form: form, preview_document: build_preview_document(result), loading: nil)
+     |> push_snapshot()}
   end
 
   def handle_async(:generate_html, {:ok, {:error, reason}}, socket) do
@@ -117,6 +157,44 @@ defmodule AtelierWeb.Live.Home.Index do
   def handle_async(:generate_html, {:exit, reason}, socket) do
     form = update_form_field(socket.assigns.form, :html, "Error: #{inspect(reason)}")
     {:noreply, assign(socket, form: form, loading: nil)}
+  end
+
+  defp push_snapshot(socket) do
+    schema = socket.assigns.form.source |> Ecto.Changeset.apply_changes()
+
+    snapshot = %{
+      "html" => schema.html,
+      "elixir" => schema.elixir,
+      "prompt" => schema.prompt,
+      "model" => schema.model,
+      "timestamp" => DateTime.utc_now() |> DateTime.to_iso8601()
+    }
+
+    history = Enum.take([snapshot | socket.assigns.history], 10)
+
+    socket
+    |> assign(history: history, history_index: 0)
+    |> push_event("persist-history", %{entries: history})
+  end
+
+  defp build_form_from_snapshot(snapshot) do
+    %Schema{}
+    |> Schema.changeset(%{
+      "html" => snapshot["html"] || "",
+      "elixir" => snapshot["elixir"] || "",
+      "prompt" => snapshot["prompt"] || "",
+      "model" => snapshot["model"] || "claude-sonnet-4-6"
+    })
+    |> to_form()
+  end
+
+  defp format_timestamp(nil), do: "Unknown"
+
+  defp format_timestamp(timestamp_str) do
+    case DateTime.from_iso8601(timestamp_str) do
+      {:ok, dt, _} -> Calendar.strftime(dt, "%-I:%M:%S %p UTC")
+      _ -> timestamp_str
+    end
   end
 
   defp update_form_field(form, field, value) do

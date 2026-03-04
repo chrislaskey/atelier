@@ -1,6 +1,19 @@
-<div class="p-12">
+<div class="p-12" id="form-history" phx-hook=".FormHistory">
   <div class="w-full flex justify-between items-center mb-4">
-    <div />
+    <div :if={@history != []} class="flex items-center gap-2">
+      <form phx-change="select-snapshot">
+        <select name="index" class="select select-sm">
+          <option
+            :for={{entry, index} <- Enum.with_index(@history)}
+            value={index}
+            selected={index == @history_index}
+          >
+            {format_timestamp(entry["timestamp"])}
+          </option>
+        </select>
+      </form>
+    </div>
+    <div :if={@history == []} />
     <div class="flex items-center gap-4">
       <.input type="select" field={@form[:model]} form="component-form" options={Schema.models()} />
       <.theme_selector preview_only />
@@ -67,4 +80,28 @@
     <span :if={@loading == :elixir}>Generating Elixir...</span>
     <span :if={@loading == :html}>Generating HTML...</span>
   </div>
+
+  <script :type={Phoenix.LiveView.ColocatedHook} name=".FormHistory">
+    export default {
+      mounted() {
+        const key = `atelier:history:${window.location.pathname}`;
+        const stored = localStorage.getItem(key);
+
+        if (stored) {
+          try {
+            const entries = JSON.parse(stored);
+            if (Array.isArray(entries) && entries.length > 0) {
+              this.pushEvent("restore-history", { entries });
+            }
+          } catch (e) {
+            console.warn("Failed to parse form history", e);
+          }
+        }
+
+        this.handleEvent("persist-history", ({ entries }) => {
+          localStorage.setItem(key, JSON.stringify(entries));
+        });
+      }
+    }
+  </script>
 </div>

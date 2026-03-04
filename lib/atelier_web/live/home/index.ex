@@ -349,6 +349,7 @@ defmodule AtelierWeb.Live.Home.Index do
   defp build_form_from_snapshot(snapshot) do
     %Schema{}
     |> Schema.changeset(%{
+      "name" => snapshot["name"] || "",
       "html" => snapshot["html"] || "",
       "elixir" => snapshot["elixir"] || "",
       "tsx" => snapshot["tsx"] || "",

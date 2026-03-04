@@ -48,7 +48,7 @@ defmodule Atelier.Components do
            name: metadata[:name] || name,
            elixir: extract_user_code(content),
            html: metadata[:html] || "",
-           jsx: extract_jsx(content),
+           tsx: extract_tsx(content),
            file_content: content,
            updated_at: metadata[:updated_at]
          }}
@@ -72,8 +72,8 @@ defmodule Atelier.Components do
             module_name: module_name,
             elixir: extract_user_code(attrs.elixir),
             html_heredoc: indent(Map.get(attrs, :html, ""), 4),
-            jsx: Map.get(attrs, :jsx, ""),
-            jsx_heredoc: indent(Map.get(attrs, :jsx, ""), 6),
+            tsx: Map.get(attrs, :tsx, ""),
+            tsx_heredoc: indent(Map.get(attrs, :tsx, ""), 6),
             js_export_name: name |> Macro.camelize() |> String.replace(".", ""),
             updated_at: DateTime.utc_now() |> DateTime.to_iso8601()
           })
@@ -127,9 +127,9 @@ defmodule Atelier.Components do
     |> Enum.map_join("\n", &(prefix <> &1))
   end
 
-  defp extract_jsx(content) do
-    case Regex.run(~r/<script[^>]*extension="jsx"[^>]*>\n(.*?)\n\s*<\/script>/s, content) do
-      [_, jsx] -> dedent(jsx)
+  defp extract_tsx(content) do
+    case Regex.run(~r/<script[^>]*extension="tsx"[^>]*>\n(.*?)\n\s*<\/script>/s, content) do
+      [_, tsx] -> dedent(tsx)
       _ -> ""
     end
   end
@@ -177,8 +177,8 @@ defmodule Atelier.Components do
     |> String.replace(~r/^\s*def metadata.*\n*/m, "")
     # Strip def html do...end
     |> String.replace(~r/^\s*def html do.+?^\s*end\n*/ms, "")
-    # Strip def jsx(assigns) ColocatedJS block
-    |> String.replace(~r/^\s*def jsx\(assigns\) do.+?^\s*end\n*/ms, "")
+    # Strip def tsx(assigns) ColocatedJS block
+    |> String.replace(~r/^\s*def tsx\(assigns\) do.+?^\s*end\n*/ms, "")
     |> String.trim()
   end
 end

@@ -18,11 +18,11 @@ defmodule <%= @module_name %> do
     """
   end
 
-<%= if @jsx != "" do %>
-  def jsx(assigns) do
+<%= if @tsx != "" do %>
+  def tsx(assigns) do
     ~H"""
-    <script :type={Phoenix.LiveView.ColocatedJS} name="<%= @js_export_name %>" extension="jsx">
-<%= @jsx_heredoc %>
+    <script :type={Phoenix.LiveView.ColocatedJS} name="<%= @js_export_name %>" extension="tsx">
+<%= @tsx_heredoc %>
     </script>
     """
   end

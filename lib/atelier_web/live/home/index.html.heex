@@ -140,16 +140,16 @@
         <input
           type="radio"
           name={@form[:view_tabs].name}
-          value="JSX"
+          value="TSX"
           class="tab"
-          aria-label="JSX"
-          checked={@form[:view_tabs].value == "JSX"}
+          aria-label="TSX"
+          checked={@form[:view_tabs].value == "TSX"}
         />
         <div class="tab-content border-base-300 bg-base-100 p-6">
-          <.input type="textarea" field={@form[:jsx]} rows={20} />
+          <.input type="textarea" field={@form[:tsx]} rows={20} />
           <div class="mt-4">
-            <button type="submit" name="source" value="jsx" class="btn btn-primary">
-              <span :if={@loading_jsx} class="loading loading-spinner loading-sm"></span> Update
+            <button type="submit" name="source" value="tsx" class="btn btn-primary">
+              <span :if={@loading_tsx} class="loading loading-spinner loading-sm"></span> Update
             </button>
           </div>
         </div>
@@ -157,13 +157,13 @@
     </.form>
 
     <div
-      :if={@loading || @loading_jsx}
+      :if={@loading || @loading_tsx}
       class="flex items-center gap-2 my-6 p-10 text-lg text-base-content/70 rounded-lg border border-gray-300"
     >
       <.icon name="hero-sparkles" class="size-6 text-yellow-500 shrink-0" />
       <span :if={@loading == :elixir}>Generating Elixir...</span>
       <span :if={@loading == :html}>Generating HTML...</span>
-      <span :if={@loading_jsx}>Generating JSX...</span>
+      <span :if={@loading_tsx}>Generating TSX...</span>
     </div>
 
     <div :if={@file_content} tabindex="0" class="collapse collapse-arrow bg-base-100 border-base-300 border mt-6">

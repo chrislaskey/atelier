@@ -17,7 +17,7 @@ defmodule AtelierWeb.Live.Home.Index do
        form: form,
        preview_document: "",
        loading: nil,
-       loading_jsx: false,
+       loading_tsx: false,
        history: [],
        history_index: 0,
        components: Atelier.Components.list(),
@@ -37,7 +37,7 @@ defmodule AtelierWeb.Live.Home.Index do
             "name" => data.name,
             "html" => data.html,
             "elixir" => data.elixir,
-            "jsx" => data.jsx
+            "tsx" => data.tsx
           })
           |> to_form()
 
@@ -95,19 +95,19 @@ defmodule AtelierWeb.Live.Home.Index do
 
             "elixir" ->
               socket
-              |> assign(form: form, loading: :html, loading_jsx: true)
+              |> assign(form: form, loading: :html, loading_tsx: true)
               |> start_async(:generate_html, fn ->
                 convert_elixir_to_html(schema.elixir, schema.html, schema.model)
               end)
-              |> start_async(:generate_jsx, fn ->
-                convert_elixir_to_jsx(schema.elixir, schema.jsx, schema.html, schema.model)
+              |> start_async(:generate_tsx, fn ->
+                convert_elixir_to_tsx(schema.elixir, schema.tsx, schema.html, schema.model)
               end)
 
-            "jsx" ->
+            "tsx" ->
               socket
               |> assign(form: form, loading: :elixir)
-              |> start_async(:generate_elixir_from_jsx, fn ->
-                convert_jsx_to_elixir(schema.jsx, schema.elixir, schema.html, schema.model)
+              |> start_async(:generate_elixir_from_tsx, fn ->
+                convert_tsx_to_elixir(schema.tsx, schema.elixir, schema.html, schema.model)
               end)
 
             "prompt" ->
@@ -178,7 +178,7 @@ defmodule AtelierWeb.Live.Home.Index do
              name: schema.name,
              html: schema.html,
              elixir: schema.elixir,
-             jsx: schema.jsx
+             tsx: schema.tsx
            }) do
         {:ok, path} ->
           socket
@@ -202,9 +202,9 @@ defmodule AtelierWeb.Live.Home.Index do
 
     {:noreply,
      socket
-     |> assign(form: form, loading: nil, loading_jsx: true)
-     |> start_async(:generate_jsx, fn ->
-       convert_elixir_to_jsx(result, schema.jsx, schema.html, schema.model)
+     |> assign(form: form, loading: nil, loading_tsx: true)
+     |> start_async(:generate_tsx, fn ->
+       convert_elixir_to_tsx(result, schema.tsx, schema.html, schema.model)
      end)
      |> maybe_push_snapshot()}
   end
@@ -225,12 +225,12 @@ defmodule AtelierWeb.Live.Home.Index do
 
     {:noreply,
      socket
-     |> assign(form: form, loading: :html, loading_jsx: true)
+     |> assign(form: form, loading: :html, loading_tsx: true)
      |> start_async(:generate_html, fn ->
        convert_elixir_to_html(result, schema.html, schema.model)
      end)
-     |> start_async(:generate_jsx, fn ->
-       convert_elixir_to_jsx(result, schema.jsx, schema.html, schema.model)
+     |> start_async(:generate_tsx, fn ->
+       convert_elixir_to_tsx(result, schema.tsx, schema.html, schema.model)
      end)}
   end
 
@@ -263,26 +263,26 @@ defmodule AtelierWeb.Live.Home.Index do
     {:noreply, assign(socket, form: form, loading: nil)}
   end
 
-  def handle_async(:generate_jsx, {:ok, {:ok, result}}, socket) do
-    form = update_form_field(socket.assigns.form, :jsx, result)
+  def handle_async(:generate_tsx, {:ok, {:ok, result}}, socket) do
+    form = update_form_field(socket.assigns.form, :tsx, result)
 
     {:noreply,
      socket
-     |> assign(form: form, loading_jsx: false)
+     |> assign(form: form, loading_tsx: false)
      |> maybe_push_snapshot()}
   end
 
-  def handle_async(:generate_jsx, {:ok, {:error, reason}}, socket) do
-    form = update_form_field(socket.assigns.form, :jsx, "Error: #{inspect(reason)}")
-    {:noreply, assign(socket, form: form, loading_jsx: false)}
+  def handle_async(:generate_tsx, {:ok, {:error, reason}}, socket) do
+    form = update_form_field(socket.assigns.form, :tsx, "Error: #{inspect(reason)}")
+    {:noreply, assign(socket, form: form, loading_tsx: false)}
   end
 
-  def handle_async(:generate_jsx, {:exit, reason}, socket) do
-    form = update_form_field(socket.assigns.form, :jsx, "Error: #{inspect(reason)}")
-    {:noreply, assign(socket, form: form, loading_jsx: false)}
+  def handle_async(:generate_tsx, {:exit, reason}, socket) do
+    form = update_form_field(socket.assigns.form, :tsx, "Error: #{inspect(reason)}")
+    {:noreply, assign(socket, form: form, loading_tsx: false)}
   end
 
-  def handle_async(:generate_elixir_from_jsx, {:ok, {:ok, result}}, socket) do
+  def handle_async(:generate_elixir_from_tsx, {:ok, {:ok, result}}, socket) do
     form = update_form_field(socket.assigns.form, :elixir, result)
     schema = form.source |> Ecto.Changeset.apply_changes()
 
@@ -294,18 +294,18 @@ defmodule AtelierWeb.Live.Home.Index do
      end)}
   end
 
-  def handle_async(:generate_elixir_from_jsx, {:ok, {:error, reason}}, socket) do
+  def handle_async(:generate_elixir_from_tsx, {:ok, {:error, reason}}, socket) do
     form = update_form_field(socket.assigns.form, :elixir, "Error: #{inspect(reason)}")
     {:noreply, assign(socket, form: form, loading: nil)}
   end
 
-  def handle_async(:generate_elixir_from_jsx, {:exit, reason}, socket) do
+  def handle_async(:generate_elixir_from_tsx, {:exit, reason}, socket) do
     form = update_form_field(socket.assigns.form, :elixir, "Error: #{inspect(reason)}")
     {:noreply, assign(socket, form: form, loading: nil)}
   end
 
   defp maybe_push_snapshot(socket) do
-    if socket.assigns.loading == nil and not socket.assigns.loading_jsx do
+    if socket.assigns.loading == nil and not socket.assigns.loading_tsx do
       push_snapshot(socket)
     else
       socket
@@ -319,7 +319,7 @@ defmodule AtelierWeb.Live.Home.Index do
       "name" => schema.name,
       "html" => schema.html,
       "elixir" => schema.elixir,
-      "jsx" => schema.jsx,
+      "tsx" => schema.tsx,
       "prompt" => schema.prompt,
       "model" => schema.model,
       "timestamp" => DateTime.utc_now() |> DateTime.to_iso8601()
@@ -337,7 +337,7 @@ defmodule AtelierWeb.Live.Home.Index do
     |> Schema.changeset(%{
       "html" => snapshot["html"] || "",
       "elixir" => snapshot["elixir"] || "",
-      "jsx" => snapshot["jsx"] || "",
+      "tsx" => snapshot["tsx"] || "",
       "prompt" => snapshot["prompt"] || "",
       "model" => snapshot["model"] || "claude-sonnet-4-6"
     })
@@ -488,15 +488,15 @@ defmodule AtelierWeb.Live.Home.Index do
     end
   end
 
-  defp convert_elixir_to_jsx(elixir, existing_jsx, html, model) do
+  defp convert_elixir_to_tsx(elixir, existing_tsx, html, model) do
     user_content =
-      if existing_jsx != "" do
+      if existing_tsx != "" do
         """
         Update this React component to match the new Phoenix/HEEx component. Keep changes minimal — preserve existing structure, props, and naming where possible.
 
         Existing React component:
 
-        #{existing_jsx}
+        #{existing_tsx}
 
         New Elixir component:
 
@@ -508,7 +508,7 @@ defmodule AtelierWeb.Live.Home.Index do
         """
       else
         """
-        Convert this Phoenix/HEEx component to a React functional component with JSX.
+        Convert this Phoenix/HEEx component to a React functional component with TSX.
 
         Elixir component:
 
@@ -524,7 +524,7 @@ defmodule AtelierWeb.Live.Home.Index do
       model: model,
       max_tokens: 4096,
       system:
-        "You are an expert React and Phoenix developer. Convert the given Phoenix/HEEx component into an equivalent React functional component using JSX. Use the same DaisyUI (preferred) and Tailwind CSS classes. Map Phoenix attrs to React props with sensible defaults. Export the component as the default export. Return only the raw JSX code. No markdown, no backtick fences, no explanation.",
+        "You are an expert React and Phoenix developer. Convert the given Phoenix/HEEx component into an equivalent React functional component using TSX. Use the same DaisyUI (preferred) and Tailwind CSS classes. Map Phoenix attrs to React props with sensible defaults. Export the component as the default export. Return only the raw TSX code. No markdown, no backtick fences, no explanation.",
       messages: [
         %{
           role: "user",
@@ -540,29 +540,29 @@ defmodule AtelierWeb.Live.Home.Index do
     end
   end
 
-  defp convert_jsx_to_elixir(jsx, existing_elixir, _html, model) do
+  defp convert_tsx_to_elixir(tsx, existing_elixir, _html, model) do
     user_content =
       if existing_elixir != "" do
         """
-        Update this Phoenix functional component to match the new React/JSX component. Keep changes minimal — preserve existing structure, naming, attrs, and slots where possible.
+        Update this Phoenix functional component to match the new React/TSX component. Keep changes minimal — preserve existing structure, naming, attrs, and slots where possible.
 
         Existing Elixir component:
 
         #{existing_elixir}
 
-        New React/JSX component:
+        New React/TSX component:
 
-        #{jsx}
+        #{tsx}
         """
       else
-        "Convert this React/JSX component to a reusable Phoenix functional component:\n\n#{jsx}"
+        "Convert this React/TSX component to a reusable Phoenix functional component:\n\n#{tsx}"
       end
 
     params = %{
       model: model,
       max_tokens: 4096,
       system:
-        "You are an expert Elixir and Phoenix developer. Convert the given React/JSX component into a reusable Phoenix functional component using MODERN 2026 HEEx syntax. In addition to `def` functions, define `attr` and `slot` annotations as needed. Return only the raw code. No markdown, no backtick fences, no explanation.",
+        "You are an expert Elixir and Phoenix developer. Convert the given React/TSX component into a reusable Phoenix functional component using MODERN 2026 HEEx syntax. In addition to `def` functions, define `attr` and `slot` annotations as needed. Return only the raw code. No markdown, no backtick fences, no explanation.",
       messages: [
         %{
           role: "user",

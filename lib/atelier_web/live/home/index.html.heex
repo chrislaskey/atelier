@@ -1,7 +1,9 @@
+<.flash_group flash={@flash} />
+
 <div class="p-12" id="form-history" phx-hook=".FormHistory">
   <div class="w-full flex justify-between items-center mb-4">
-    <div :if={@history != []} class="flex items-center gap-2">
-      <form phx-change="select-snapshot">
+    <div class="flex items-center gap-2">
+      <form :if={@history != []} phx-change="select-snapshot">
         <select name="index" class="select select-sm">
           <option
             :for={{entry, index} <- Enum.with_index(@history)}
@@ -13,16 +15,28 @@
         </select>
       </form>
     </div>
-    <div :if={@history == []} />
     <div class="flex items-center gap-4">
       <.input type="select" field={@form[:model]} form="component-form" options={Schema.models()} />
       <.theme_selector preview_only />
     </div>
   </div>
 
-  <.form for={@form} phx-submit="save" id="component-form">
+  <.form for={@form} phx-change="validate" phx-submit="save" id="component-form">
+    <div class="flex items-center gap-x-3">
+      <.input type="text" field={@form[:name]} form="component-form" placeholder="Component name" />
+      <button type="button" phx-click="write" class="mb-2 btn btn-sm btn-outline">
+        Save to file
+      </button>
+    </div>
     <div class="tabs tabs-lift">
-      <input type="radio" name="view_tabs" class="tab" aria-label="Preview" checked="checked" />
+      <input
+        type="radio"
+        name={@form[:view_tabs].name}
+        value="Preview"
+        class="tab"
+        aria-label="Preview"
+        checked={@form[:view_tabs].value == "Preview"}
+      />
       <div class="tab-content border-base-300 bg-base-100 p-6">
         <iframe
           :if={@preview_document != ""}
@@ -35,20 +49,42 @@
         </p>
       </div>
 
-      <input type="radio" name="view_tabs" class="tab" aria-label="Prompt" />
+      <input
+        type="radio"
+        name={@form[:view_tabs].name}
+        value="Prompt"
+        class="tab"
+        aria-label="Prompt"
+        checked={@form[:view_tabs].value == "Prompt"}
+      />
       <div class="tab-content border-base-300 bg-base-100 p-6">
-        <.input type="textarea" field={@form[:prompt]} placeholder={if @preview_document == "", do: "Describe what you want to make", else: "Describe what you want to update"}/>
+        <.input
+          type="textarea"
+          field={@form[:prompt]}
+          rows={3}
+          placeholder={
+            if @preview_document == "",
+              do: "Describe what you want to make",
+              else: "Describe what you want to update"
+          }
+        />
         <div class="mt-4">
           <button type="submit" name="source" value="prompt" class="btn btn-primary">
-            <span :if={@loading != nil} class="loading loading-spinner loading-sm"></span>
-            Update
+            <span :if={@loading != nil} class="loading loading-spinner loading-sm"></span> Update
           </button>
         </div>
       </div>
 
-      <input type="radio" name="view_tabs" class="tab" aria-label="HTML" />
+      <input
+        type="radio"
+        name={@form[:view_tabs].name}
+        value="HTML"
+        class="tab"
+        aria-label="HTML"
+        checked={@form[:view_tabs].value == "HTML"}
+      />
       <div class="tab-content border-base-300 bg-base-100 p-6">
-        <.input type="textarea" field={@form[:html]} />
+        <.input type="textarea" field={@form[:html]} rows={20} />
         <div class="mt-4">
           <button type="submit" name="source" value="html" class="btn btn-primary">
             <span :if={@loading == :elixir} class="loading loading-spinner loading-sm"></span>
@@ -57,9 +93,16 @@
         </div>
       </div>
 
-      <input type="radio" name="view_tabs" class="tab" aria-label="Elixir" />
+      <input
+        type="radio"
+        name={@form[:view_tabs].name}
+        value="Elixir"
+        class="tab"
+        aria-label="Elixir"
+        checked={@form[:view_tabs].value == "Elixir"}
+      />
       <div class="tab-content border-base-300 bg-base-100 p-6">
-        <.input type="textarea" field={@form[:elixir]} />
+        <.input type="textarea" field={@form[:elixir]} rows={20} />
         <div class="mt-4">
           <button type="submit" name="source" value="elixir" class="btn btn-primary">
             <span :if={@loading == :html} class="loading loading-spinner loading-sm"></span>
@@ -68,14 +111,24 @@
         </div>
       </div>
 
-      <input type="radio" name="view_tabs" class="tab" aria-label="JSX" />
+      <input
+        type="radio"
+        name={@form[:view_tabs].name}
+        value="JSX"
+        class="tab"
+        aria-label="JSX"
+        checked={@form[:view_tabs].value == "JSX"}
+      />
       <div class="tab-content border-base-300 bg-base-100 p-6">
         JSX
       </div>
     </div>
   </.form>
 
-  <div :if={@loading} class="flex items-center gap-2 my-6 p-10 text-lg text-base-content/70 rounded-lg border border-gray-300">
+  <div
+    :if={@loading}
+    class="flex items-center gap-2 my-6 p-10 text-lg text-base-content/70 rounded-lg border border-gray-300"
+  >
     <.icon name="hero-sparkles" class="size-6 text-yellow-500 shrink-0" />
     <span :if={@loading == :elixir}>Generating Elixir...</span>
     <span :if={@loading == :html}>Generating HTML...</span>

@@ -12,10 +12,17 @@ defmodule AtelierWeb.Live.Home.Index do
       |> Schema.changeset(%{})
       |> to_form()
 
-    {:ok, assign(socket, form: form, preview_document: "", loading: nil, history: [], history_index: 0)}
+    {:ok,
+     assign(socket, form: form, preview_document: "", loading: nil, history: [], history_index: 0)}
   end
 
   @impl true
+  def handle_event("validate", %{"schema" => schema_params} = _params, socket) do
+    changeset = Schema.changeset(%Schema{}, schema_params)
+
+    {:noreply, assign(socket, form: to_form(changeset))}
+  end
+
   def handle_event("save", %{"schema" => schema_params} = params, socket) do
     changeset = Schema.changeset(%Schema{}, schema_params)
 
@@ -97,6 +104,25 @@ defmodule AtelierWeb.Live.Home.Index do
     end
   end
 
+  def handle_event("write", _params, socket) do
+    schema = socket.assigns.form.source |> Ecto.Changeset.apply_changes()
+
+    socket =
+      case Atelier.Components.write(%{
+             name: schema.name,
+             html: schema.html,
+             elixir: schema.elixir,
+             prompt: schema.prompt,
+             model: schema.model
+           }) do
+        {:ok, path} -> put_flash(socket, :info, "Wrote #{path}")
+        {:error, reason} -> put_flash(socket, :error, reason)
+        :skip -> socket
+      end
+
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_async(:generate_elixir, {:ok, {:ok, result}}, socket) do
     form = update_form_field(socket.assigns.form, :elixir, result)
@@ -163,6 +189,7 @@ defmodule AtelierWeb.Live.Home.Index do
     schema = socket.assigns.form.source |> Ecto.Changeset.apply_changes()
 
     snapshot = %{
+      "name" => schema.name,
       "html" => schema.html,
       "elixir" => schema.elixir,
       "prompt" => schema.prompt,

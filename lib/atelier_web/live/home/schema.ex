@@ -11,15 +11,17 @@ defmodule AtelierWeb.Live.Home.Index.Schema do
   def models, do: @models
 
   embedded_schema do
+    field :name, :string, default: ""
     field :html, :string, default: ""
     field :elixir, :string, default: ""
     field :prompt, :string, default: ""
     field :model, :string, default: "claude-sonnet-4-6"
+    field :view_tabs, :string, default: "Preview"
   end
 
   def changeset(component \\ %__MODULE__{}, attrs) do
     component
-    |> cast(attrs, [:html, :elixir, :prompt, :model])
+    |> cast(attrs, [:name, :html, :elixir, :prompt, :model, :view_tabs])
     |> validate_inclusion(:model, @models)
   end
 end

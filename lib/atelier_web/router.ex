@@ -14,12 +14,6 @@ defmodule AtelierWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", AtelierWeb do
-    pipe_through :browser
-
-    live "/", Live.Home.Index
-  end
-
   # Other scopes may use custom stacks.
   # scope "/api", AtelierWeb do
   #   pipe_through :api
@@ -40,5 +34,12 @@ defmodule AtelierWeb.Router do
       live_dashboard "/dashboard", metrics: AtelierWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  scope "/", AtelierWeb do
+    pipe_through :browser
+
+    live "/", Live.Home.Index
+    live "/*path", Live.Home.Index
   end
 end

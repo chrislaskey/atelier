@@ -1,6 +1,9 @@
 <.flash_group flash={@flash} />
 
-<div class="p-12" id="form-history" phx-hook=".FormHistory">
+<div class="flex min-h-screen">
+  <.sidebar components={@components} current={@current_component} />
+
+  <div class="flex-1 p-12" id="form-history" phx-hook=".FormHistory">
   <div class="w-full flex justify-between items-center mb-4">
     <div class="flex items-center gap-2">
       <form :if={@history != []} phx-change="select-snapshot">
@@ -157,4 +160,5 @@
       }
     }
   </script>
+</div>
 </div>

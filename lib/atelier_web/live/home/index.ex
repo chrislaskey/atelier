@@ -13,7 +13,46 @@ defmodule AtelierWeb.Live.Home.Index do
       |> to_form()
 
     {:ok,
-     assign(socket, form: form, preview_document: "", loading: nil, history: [], history_index: 0)}
+     assign(socket,
+       form: form,
+       preview_document: "",
+       loading: nil,
+       history: [],
+       history_index: 0,
+       components: Atelier.Components.list(),
+       current_component: nil
+     )}
+  end
+
+  @impl true
+  def handle_params(%{"path" => [name]}, _uri, socket) do
+    case Atelier.Components.read(name) do
+      {:ok, data} ->
+        form =
+          %Schema{}
+          |> Schema.changeset(%{
+            "name" => data.name,
+            "html" => data.html,
+            "elixir" => data.elixir,
+            "prompt" => data.prompt,
+            "model" => data.model
+          })
+          |> to_form()
+
+        {:noreply,
+         assign(socket,
+           current_component: name,
+           form: form,
+           preview_document: build_preview_document(data.html)
+         )}
+
+      :error ->
+        {:noreply, assign(socket, current_component: name)}
+    end
+  end
+
+  def handle_params(_params, _uri, socket) do
+    {:noreply, assign(socket, current_component: nil)}
   end
 
   @impl true
@@ -115,9 +154,16 @@ defmodule AtelierWeb.Live.Home.Index do
              prompt: schema.prompt,
              model: schema.model
            }) do
-        {:ok, path} -> put_flash(socket, :info, "Wrote #{path}")
-        {:error, reason} -> put_flash(socket, :error, reason)
-        :skip -> socket
+        {:ok, path} ->
+          socket
+          |> put_flash(:info, "Wrote #{path}")
+          |> assign(components: Atelier.Components.list())
+
+        {:error, reason} ->
+          put_flash(socket, :error, reason)
+
+        :skip ->
+          socket
       end
 
     {:noreply, socket}

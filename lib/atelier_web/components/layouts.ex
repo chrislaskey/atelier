@@ -115,6 +115,43 @@ defmodule AtelierWeb.Layouts do
     """
   end
 
+  attr :components, :list, required: true, doc: "tree of component nodes"
+  attr :current, :string, default: nil, doc: "name of the currently selected component"
+
+  def sidebar(assigns) do
+    ~H"""
+    <nav class="w-48 shrink-0 bg-base-200 p-8">
+      <div class="font-bold">Components</div>
+      <ul class="menu menu-sm bg-base-200 rounded-box w-full">
+        <.tree_node :for={node <- @components} node={node} current={@current} />
+      </ul>
+    </nav>
+    """
+  end
+
+  defp tree_node(%{node: %{type: :dir}} = assigns) do
+    ~H"""
+    <li>
+      <details open>
+        <summary>{@node.label}</summary>
+        <ul>
+          <.tree_node :for={node <- @node.children} node={node} current={@current} />
+        </ul>
+      </details>
+    </li>
+    """
+  end
+
+  defp tree_node(%{node: %{type: :file}} = assigns) do
+    ~H"""
+    <li>
+      <.link patch={"/#{@node.name}"} class={@current == @node.name && "active"}>
+        {@node.label}
+      </.link>
+    </li>
+    """
+  end
+
   @themes [
     "light",
     "dark",

@@ -10,7 +10,7 @@ defmodule <%= @module_name %> do
     updated_at: <%= inspect(@updated_at) %>
   }
 
-  <%= @elixir %>
+<%= @elixir %>
 
   def html do
     ~S"""

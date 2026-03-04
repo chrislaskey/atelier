@@ -70,7 +70,7 @@ defmodule Atelier.Components do
         assigns:
           Map.merge(attrs, %{
             module_name: module_name,
-            elixir: extract_user_code(attrs.elixir),
+            elixir: indent(extract_user_code(attrs.elixir), 2),
             html_heredoc: indent(Map.get(attrs, :html, ""), 4),
             tsx: Map.get(attrs, :tsx, ""),
             tsx_heredoc: indent(Map.get(attrs, :tsx, ""), 6),
@@ -119,7 +119,6 @@ defmodule Atelier.Components do
   end
 
   defp indent(text, spaces) do
-    dbg text
     prefix = String.duplicate(" ", spaces)
 
     text

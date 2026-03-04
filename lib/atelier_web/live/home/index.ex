@@ -53,12 +53,26 @@ defmodule AtelierWeb.Live.Home.Index do
          )}
 
       :error ->
-        {:noreply, assign(socket, current_component: name, file_content: nil, file_updated_at: nil, history: [], history_index: 0)}
+        {:noreply,
+         assign(socket,
+           current_component: name,
+           file_content: nil,
+           file_updated_at: nil,
+           history: [],
+           history_index: 0
+         )}
     end
   end
 
   def handle_params(_params, _uri, socket) do
-    {:noreply, assign(socket, current_component: nil, file_content: nil, file_updated_at: nil, history: [], history_index: 0)}
+    {:noreply,
+     assign(socket,
+       current_component: nil,
+       file_content: nil,
+       file_updated_at: nil,
+       history: [],
+       history_index: 0
+     )}
   end
 
   @impl true

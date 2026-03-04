@@ -166,7 +166,11 @@
       <span :if={@loading_tsx}>Generating TSX...</span>
     </div>
 
-    <div :if={@file_content} tabindex="0" class="collapse collapse-arrow bg-base-100 border-base-300 border mt-6">
+    <div
+      :if={@file_content}
+      tabindex="0"
+      class="collapse collapse-arrow bg-base-100 border-base-300 border mt-6"
+    >
       <div class="collapse-title font-semibold after:start-5 after:end-auto pe-4 ps-12">
         Source file
       </div>

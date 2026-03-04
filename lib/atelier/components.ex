@@ -46,10 +46,11 @@ defmodule Atelier.Components do
         {:ok,
          %{
            name: metadata[:name] || name,
-           elixir: content,
+           elixir: extract_user_code(content),
            html: metadata[:html] || "",
-           prompt: metadata[:prompt] || "",
-           model: metadata[:model] || "claude-sonnet-4-6"
+           jsx: extract_jsx(content),
+           file_content: content,
+           updated_at: metadata[:updated_at]
          }}
 
       {:error, _} ->
@@ -69,7 +70,11 @@ defmodule Atelier.Components do
         assigns:
           Map.merge(attrs, %{
             module_name: module_name,
-            elixir: strip_defmodule(attrs.elixir),
+            elixir: extract_user_code(attrs.elixir),
+            html_heredoc: indent(Map.get(attrs, :html, ""), 4),
+            jsx: Map.get(attrs, :jsx, ""),
+            jsx_heredoc: indent(Map.get(attrs, :jsx, ""), 6),
+            js_export_name: name |> Macro.camelize() |> String.replace(".", ""),
             updated_at: DateTime.utc_now() |> DateTime.to_iso8601()
           })
       )
@@ -90,24 +95,90 @@ defmodule Atelier.Components do
     Code.compile_string(content, path)
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    error -> {:error, Exception.message(error)}
   end
 
   defp load_metadata(name) do
     module = Module.concat(AtelierWeb.Components, Macro.camelize(name))
 
-    if Code.ensure_loaded?(module) and function_exported?(module, :__atelier__, 0) do
-      module.__atelier__()
+    if Code.ensure_loaded?(module) do
+      metadata =
+        if function_exported?(module, :metadata, 0),
+          do: module.metadata(),
+          else: %{}
+
+      html =
+        if function_exported?(module, :html, 0),
+          do: module.html() |> String.trim(),
+          else: ""
+
+      Map.put(metadata, :html, html)
     else
       %{}
     end
   end
 
-  defp strip_defmodule(code) do
+  defp indent(text, spaces) do
+    dbg text
+    prefix = String.duplicate(" ", spaces)
+
+    text
+    |> String.split("\n")
+    |> Enum.map_join("\n", &(prefix <> &1))
+  end
+
+  defp extract_jsx(content) do
+    case Regex.run(~r/<script[^>]*extension="jsx"[^>]*>\n(.*?)\n\s*<\/script>/s, content) do
+      [_, jsx] -> dedent(jsx)
+      _ -> ""
+    end
+  end
+
+  defp dedent(text) do
+    lines = String.split(text, "\n")
+
+    min_indent =
+      lines
+      |> Enum.reject(&(String.trim(&1) == ""))
+      |> Enum.map(fn line ->
+        String.length(line) - String.length(String.trim_leading(line))
+      end)
+      |> Enum.min(fn -> 0 end)
+
+    lines
+    |> Enum.map_join("\n", fn line ->
+      if String.trim(line) == "", do: "", else: String.slice(line, min_indent..-1//1)
+    end)
+    |> String.trim()
+  end
+
+  defp extract_user_code(code) do
     code
-    |> String.replace(~r/\A\s*defmodule\s+\S+\s+do\n/, "")
-    |> String.replace(~r/\n\s*end\s*\z/, "")
-    |> String.replace(~r/\A\s*use Phoenix\.Component\n*/, "")
+    # Strip leading blank line (from old template comment)
+    |> String.replace(~r/\A\n/, "")
+    # Strip defmodule wrapper (only strip closing end if defmodule was present)
+    |> then(fn code ->
+      if Regex.match?(~r/\A\s*defmodule\s+/, code) do
+        code
+        |> String.replace(~r/\A\s*defmodule\s+\S+\s+do\n/, "")
+        |> String.replace(~r/\n\s*end\s*\z/, "")
+      else
+        code
+      end
+    end)
+    # Strip use declarations
+    |> String.replace(~r/^\s*use AtelierWeb, :live_component\n*/m, "")
+    |> String.replace(~r/^\s*use Phoenix\.Component\n*/m, "")
+    # Strip @moduledoc heredoc
+    |> String.replace(~r/^\s*@moduledoc\s+""".+?"""\n*/ms, "")
+    # Strip @metadata block
+    |> String.replace(~r/^\s*@metadata\s+%\{.+?^\s*\}\n*/ms, "")
+    # Strip def metadata
+    |> String.replace(~r/^\s*def metadata.*\n*/m, "")
+    # Strip def html do...end
+    |> String.replace(~r/^\s*def html do.+?^\s*end\n*/ms, "")
+    # Strip def jsx(assigns) ColocatedJS block
+    |> String.replace(~r/^\s*def jsx\(assigns\) do.+?^\s*end\n*/ms, "")
     |> String.trim()
   end
 end

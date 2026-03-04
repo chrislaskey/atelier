@@ -17,10 +17,13 @@ defmodule AtelierWeb.Live.Home.Index do
        form: form,
        preview_document: "",
        loading: nil,
+       loading_jsx: false,
        history: [],
        history_index: 0,
        components: Atelier.Components.list(),
-       current_component: nil
+       current_component: nil,
+       file_content: nil,
+       file_updated_at: nil
      )}
   end
 
@@ -34,8 +37,7 @@ defmodule AtelierWeb.Live.Home.Index do
             "name" => data.name,
             "html" => data.html,
             "elixir" => data.elixir,
-            "prompt" => data.prompt,
-            "model" => data.model
+            "jsx" => data.jsx
           })
           |> to_form()
 
@@ -43,16 +45,20 @@ defmodule AtelierWeb.Live.Home.Index do
          assign(socket,
            current_component: name,
            form: form,
-           preview_document: build_preview_document(data.html)
+           preview_document: build_preview_document(data.html),
+           file_content: data.file_content,
+           file_updated_at: data.updated_at,
+           history: [],
+           history_index: 0
          )}
 
       :error ->
-        {:noreply, assign(socket, current_component: name)}
+        {:noreply, assign(socket, current_component: name, file_content: nil, file_updated_at: nil, history: [], history_index: 0)}
     end
   end
 
   def handle_params(_params, _uri, socket) do
-    {:noreply, assign(socket, current_component: nil)}
+    {:noreply, assign(socket, current_component: nil, file_content: nil, file_updated_at: nil, history: [], history_index: 0)}
   end
 
   @impl true
@@ -89,9 +95,19 @@ defmodule AtelierWeb.Live.Home.Index do
 
             "elixir" ->
               socket
-              |> assign(form: form, loading: :html)
+              |> assign(form: form, loading: :html, loading_jsx: true)
               |> start_async(:generate_html, fn ->
                 convert_elixir_to_html(schema.elixir, schema.html, schema.model)
+              end)
+              |> start_async(:generate_jsx, fn ->
+                convert_elixir_to_jsx(schema.elixir, schema.jsx, schema.html, schema.model)
+              end)
+
+            "jsx" ->
+              socket
+              |> assign(form: form, loading: :elixir)
+              |> start_async(:generate_elixir_from_jsx, fn ->
+                convert_jsx_to_elixir(schema.jsx, schema.elixir, schema.html, schema.model)
               end)
 
             "prompt" ->
@@ -114,16 +130,20 @@ defmodule AtelierWeb.Live.Home.Index do
 
     case history do
       [latest | _] ->
-        form = build_form_from_snapshot(latest)
-        preview = build_preview_document(latest["html"] || "")
+        if file_is_newer?(socket.assigns.file_updated_at, latest["timestamp"]) do
+          {:noreply, assign(socket, history: history, history_index: 0)}
+        else
+          form = build_form_from_snapshot(latest)
+          preview = build_preview_document(latest["html"] || "")
 
-        {:noreply,
-         assign(socket,
-           history: history,
-           history_index: 0,
-           form: form,
-           preview_document: preview
-         )}
+          {:noreply,
+           assign(socket,
+             history: history,
+             history_index: 0,
+             form: form,
+             preview_document: preview
+           )}
+        end
 
       [] ->
         {:noreply, socket}
@@ -143,6 +163,13 @@ defmodule AtelierWeb.Live.Home.Index do
     end
   end
 
+  def handle_event("clear-history", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(history: [], history_index: 0)
+     |> push_event("persist-history", %{entries: []})}
+  end
+
   def handle_event("write", _params, socket) do
     schema = socket.assigns.form.source |> Ecto.Changeset.apply_changes()
 
@@ -151,8 +178,7 @@ defmodule AtelierWeb.Live.Home.Index do
              name: schema.name,
              html: schema.html,
              elixir: schema.elixir,
-             prompt: schema.prompt,
-             model: schema.model
+             jsx: schema.jsx
            }) do
         {:ok, path} ->
           socket
@@ -172,11 +198,15 @@ defmodule AtelierWeb.Live.Home.Index do
   @impl true
   def handle_async(:generate_elixir, {:ok, {:ok, result}}, socket) do
     form = update_form_field(socket.assigns.form, :elixir, result)
+    schema = form.source |> Ecto.Changeset.apply_changes()
 
     {:noreply,
      socket
-     |> assign(form: form, loading: nil)
-     |> push_snapshot()}
+     |> assign(form: form, loading: nil, loading_jsx: true)
+     |> start_async(:generate_jsx, fn ->
+       convert_elixir_to_jsx(result, schema.jsx, schema.html, schema.model)
+     end)
+     |> maybe_push_snapshot()}
   end
 
   def handle_async(:generate_elixir, {:ok, {:error, reason}}, socket) do
@@ -191,14 +221,16 @@ defmodule AtelierWeb.Live.Home.Index do
 
   def handle_async(:prompt_generate_elixir, {:ok, {:ok, result}}, socket) do
     form = update_form_field(socket.assigns.form, :elixir, result)
-    model = form.source |> Ecto.Changeset.apply_changes() |> Map.get(:model)
-    html = form.source |> Ecto.Changeset.apply_changes() |> Map.get(:html)
+    schema = form.source |> Ecto.Changeset.apply_changes()
 
     {:noreply,
      socket
-     |> assign(form: form, loading: :html)
+     |> assign(form: form, loading: :html, loading_jsx: true)
      |> start_async(:generate_html, fn ->
-       convert_elixir_to_html(result, html, model)
+       convert_elixir_to_html(result, schema.html, schema.model)
+     end)
+     |> start_async(:generate_jsx, fn ->
+       convert_elixir_to_jsx(result, schema.jsx, schema.html, schema.model)
      end)}
   end
 
@@ -218,7 +250,7 @@ defmodule AtelierWeb.Live.Home.Index do
     {:noreply,
      socket
      |> assign(form: form, preview_document: build_preview_document(result), loading: nil)
-     |> push_snapshot()}
+     |> maybe_push_snapshot()}
   end
 
   def handle_async(:generate_html, {:ok, {:error, reason}}, socket) do
@@ -231,6 +263,55 @@ defmodule AtelierWeb.Live.Home.Index do
     {:noreply, assign(socket, form: form, loading: nil)}
   end
 
+  def handle_async(:generate_jsx, {:ok, {:ok, result}}, socket) do
+    form = update_form_field(socket.assigns.form, :jsx, result)
+
+    {:noreply,
+     socket
+     |> assign(form: form, loading_jsx: false)
+     |> maybe_push_snapshot()}
+  end
+
+  def handle_async(:generate_jsx, {:ok, {:error, reason}}, socket) do
+    form = update_form_field(socket.assigns.form, :jsx, "Error: #{inspect(reason)}")
+    {:noreply, assign(socket, form: form, loading_jsx: false)}
+  end
+
+  def handle_async(:generate_jsx, {:exit, reason}, socket) do
+    form = update_form_field(socket.assigns.form, :jsx, "Error: #{inspect(reason)}")
+    {:noreply, assign(socket, form: form, loading_jsx: false)}
+  end
+
+  def handle_async(:generate_elixir_from_jsx, {:ok, {:ok, result}}, socket) do
+    form = update_form_field(socket.assigns.form, :elixir, result)
+    schema = form.source |> Ecto.Changeset.apply_changes()
+
+    {:noreply,
+     socket
+     |> assign(form: form, loading: :html)
+     |> start_async(:generate_html, fn ->
+       convert_elixir_to_html(result, schema.html, schema.model)
+     end)}
+  end
+
+  def handle_async(:generate_elixir_from_jsx, {:ok, {:error, reason}}, socket) do
+    form = update_form_field(socket.assigns.form, :elixir, "Error: #{inspect(reason)}")
+    {:noreply, assign(socket, form: form, loading: nil)}
+  end
+
+  def handle_async(:generate_elixir_from_jsx, {:exit, reason}, socket) do
+    form = update_form_field(socket.assigns.form, :elixir, "Error: #{inspect(reason)}")
+    {:noreply, assign(socket, form: form, loading: nil)}
+  end
+
+  defp maybe_push_snapshot(socket) do
+    if socket.assigns.loading == nil and not socket.assigns.loading_jsx do
+      push_snapshot(socket)
+    else
+      socket
+    end
+  end
+
   defp push_snapshot(socket) do
     schema = socket.assigns.form.source |> Ecto.Changeset.apply_changes()
 
@@ -238,6 +319,7 @@ defmodule AtelierWeb.Live.Home.Index do
       "name" => schema.name,
       "html" => schema.html,
       "elixir" => schema.elixir,
+      "jsx" => schema.jsx,
       "prompt" => schema.prompt,
       "model" => schema.model,
       "timestamp" => DateTime.utc_now() |> DateTime.to_iso8601()
@@ -255,10 +337,18 @@ defmodule AtelierWeb.Live.Home.Index do
     |> Schema.changeset(%{
       "html" => snapshot["html"] || "",
       "elixir" => snapshot["elixir"] || "",
+      "jsx" => snapshot["jsx"] || "",
       "prompt" => snapshot["prompt"] || "",
       "model" => snapshot["model"] || "claude-sonnet-4-6"
     })
     |> to_form()
+  end
+
+  defp file_is_newer?(nil, _history_timestamp), do: false
+  defp file_is_newer?(_file_timestamp, nil), do: true
+
+  defp file_is_newer?(file_timestamp, history_timestamp) do
+    file_timestamp > history_timestamp
   end
 
   defp format_timestamp(nil), do: "Unknown"
@@ -375,14 +465,104 @@ defmodule AtelierWeb.Live.Home.Index do
         #{elixir}
         """
       else
-        "Convert this Phoenix/HEEx component to plain HTML with Tailwind and DaisyUI classes:\n\n#{elixir}"
+        "Convert this Phoenix/HEEx component to plain HTML with DaisyUI (preferred) and Tailwind classes:\n\n#{elixir}"
       end
 
     params = %{
       model: model,
       max_tokens: 4096,
       system:
-        "You are an expert Elixir and Phoenix developer. Convert the given Phoenix/HEEx component into well-formatted, properly indented HTML with Tailwind CSS and DaisyUI classes. Return only the raw HTML. No markdown, no backtick fences, no explanation.",
+        "You are an expert Elixir and Phoenix developer. Convert the given Phoenix/HEEx component into well-formatted, properly indented HTML with DaisyUI (preferred) and Tailwind CSS classes. Return only the raw HTML. No markdown, no backtick fences, no explanation.",
+      messages: [
+        %{
+          role: "user",
+          content: user_content
+        }
+      ]
+    }
+
+    case Atelier.AI.create_message(params) do
+      {:ok, %{"content" => [%{"text" => text} | _]}} -> {:ok, strip_code_fences(text)}
+      {:ok, response} -> {:error, "Unexpected response: #{inspect(response)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp convert_elixir_to_jsx(elixir, existing_jsx, html, model) do
+    user_content =
+      if existing_jsx != "" do
+        """
+        Update this React component to match the new Phoenix/HEEx component. Keep changes minimal — preserve existing structure, props, and naming where possible.
+
+        Existing React component:
+
+        #{existing_jsx}
+
+        New Elixir component:
+
+        #{elixir}
+
+        HTML for reference:
+
+        #{html}
+        """
+      else
+        """
+        Convert this Phoenix/HEEx component to a React functional component with JSX.
+
+        Elixir component:
+
+        #{elixir}
+
+        HTML for reference:
+
+        #{html}
+        """
+      end
+
+    params = %{
+      model: model,
+      max_tokens: 4096,
+      system:
+        "You are an expert React and Phoenix developer. Convert the given Phoenix/HEEx component into an equivalent React functional component using JSX. Use the same DaisyUI (preferred) and Tailwind CSS classes. Map Phoenix attrs to React props with sensible defaults. Export the component as the default export. Return only the raw JSX code. No markdown, no backtick fences, no explanation.",
+      messages: [
+        %{
+          role: "user",
+          content: user_content
+        }
+      ]
+    }
+
+    case Atelier.AI.create_message(params) do
+      {:ok, %{"content" => [%{"text" => text} | _]}} -> {:ok, strip_code_fences(text)}
+      {:ok, response} -> {:error, "Unexpected response: #{inspect(response)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp convert_jsx_to_elixir(jsx, existing_elixir, _html, model) do
+    user_content =
+      if existing_elixir != "" do
+        """
+        Update this Phoenix functional component to match the new React/JSX component. Keep changes minimal — preserve existing structure, naming, attrs, and slots where possible.
+
+        Existing Elixir component:
+
+        #{existing_elixir}
+
+        New React/JSX component:
+
+        #{jsx}
+        """
+      else
+        "Convert this React/JSX component to a reusable Phoenix functional component:\n\n#{jsx}"
+      end
+
+    params = %{
+      model: model,
+      max_tokens: 4096,
+      system:
+        "You are an expert Elixir and Phoenix developer. Convert the given React/JSX component into a reusable Phoenix functional component using MODERN 2026 HEEx syntax. In addition to `def` functions, define `attr` and `slot` annotations as needed. Return only the raw code. No markdown, no backtick fences, no explanation.",
       messages: [
         %{
           role: "user",

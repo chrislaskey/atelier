@@ -14,6 +14,7 @@ defmodule AtelierWeb.Live.Home.Index.Schema do
     field :name, :string, default: ""
     field :html, :string, default: ""
     field :elixir, :string, default: ""
+    field :jsx, :string, default: ""
     field :prompt, :string, default: ""
     field :model, :string, default: "claude-sonnet-4-6"
     field :view_tabs, :string, default: "Preview"
@@ -21,7 +22,7 @@ defmodule AtelierWeb.Live.Home.Index.Schema do
 
   def changeset(component \\ %__MODULE__{}, attrs) do
     component
-    |> cast(attrs, [:name, :html, :elixir, :prompt, :model, :view_tabs])
+    |> cast(attrs, [:name, :html, :elixir, :jsx, :prompt, :model, :view_tabs])
     |> validate_inclusion(:model, @models)
   end
 end

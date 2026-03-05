@@ -120,7 +120,7 @@ defmodule AtelierWeb.Layouts do
 
   def sidebar(assigns) do
     ~H"""
-    <nav class="w-80 shrink-0 bg-base-200 py-8 px-6">
+    <nav class="w-80 shrink-0 bg-base-200 py-8 px-6" style="min-height: calc(100vh - 4rem);">
       <div class="w-full overflow-x-auto">
         <div class="font-bold mb-2 text-sm">Components</div>
         <ul :for={group <- @components} class="menu menu-xs w-full">
@@ -133,7 +133,7 @@ defmodule AtelierWeb.Layouts do
               <ul>
                 <li :for={file <- group.files}>
                   <.link patch={"/#{file.name}"} class={@current == file.name && "active"}>
-                    <.icon name="hero-document-text" class="size-3" />
+                    <.icon name="hero-document" class="size-3" />
                     {file.filename}
                   </.link>
                 </li>

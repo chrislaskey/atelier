@@ -17,49 +17,8 @@
     <.sidebar components={@components} current={@current_component} />
 
     <div class="flex-1 p-12">
-      <div class="w-full flex justify-between items-center mb-4">
-        <div class="flex items-center text-sm">
-          <.input
-            type="select"
-            field={@form[:model]}
-            form="component-form"
-            options={Schema.models()}
-          />
-          <div
-            id="form-history"
-            phx-hook=".FormHistory"
-            class="flex items-center text-sm mb-2 ml-2"
-          >
-            <span class="mr-2">History</span>
-            <form :if={@history != []} phx-change="select-snapshot">
-              <select name="index" class="select">
-                <option
-                  :for={{entry, index} <- Enum.with_index(@history)}
-                  value={index}
-                  selected={index == @history_index}
-                >
-                  {format_timestamp(entry["timestamp"])}
-                </option>
-              </select>
-            </form>
-            <button
-              :if={@history != []}
-              type="button"
-              phx-click="clear-history"
-              data-confirm="Clear all local history for this page?"
-              class="btn btn-ghost"
-            >
-              <.icon name="hero-x-circle" class="size-4" />
-            </button>
-          </div>
-        </div>
-        <div class="flex items-center gap-4">
-          <.theme_selector />
-        </div>
-      </div>
-
       <.form for={@form} phx-change="validate" phx-submit="save" id="component-form">
-        <div class="flex items-center gap-x-3">
+        <div class="my-3 flex items-center gap-x-3">
           <.input
             type="text"
             field={@form[:name]}
@@ -67,7 +26,7 @@
             placeholder="Component name"
           />
           <button type="button" phx-click="write" class="mb-2 btn">
-            Save to file
+            Save component file
           </button>
         </div>
         <div class="tabs tabs-lift">
@@ -90,12 +49,6 @@
                   else: "Describe what you want to update"
               }
             />
-            <div class="mt-4">
-              <button type="submit" name="source" value="prompt" class="btn btn-primary">
-                <span :if={@loading != nil} class="loading loading-spinner loading-sm"></span>
-                Update
-              </button>
-            </div>
           </div>
 
           <input
@@ -127,13 +80,7 @@
             checked={@form[:view_tabs].value == "HTML"}
           />
           <div class="tab-content border-base-300 bg-base-100 p-6">
-            <.input type="textarea" field={@form[:html]} rows={20} />
-            <div class="mt-4">
-              <button type="submit" name="source" value="html" class="btn btn-primary">
-                <span :if={@loading == :elixir} class="loading loading-spinner loading-sm"></span>
-                Update
-              </button>
-            </div>
+            <.input type="textarea" field={@form[:html]} rows={14} />
           </div>
 
           <input
@@ -145,13 +92,7 @@
             checked={@form[:view_tabs].value == "Elixir"}
           />
           <div class="tab-content border-base-300 bg-base-100 p-6">
-            <.input type="textarea" field={@form[:elixir]} rows={20} />
-            <div class="mt-4">
-              <button type="submit" name="source" value="elixir" class="btn btn-primary">
-                <span :if={@loading == :html} class="loading loading-spinner loading-sm"></span>
-                Update
-              </button>
-            </div>
+            <.input type="textarea" field={@form[:elixir]} rows={14} />
           </div>
 
           <input
@@ -163,10 +104,46 @@
             checked={@form[:view_tabs].value == "TSX"}
           />
           <div class="tab-content border-base-300 bg-base-100 p-6">
-            <.input type="textarea" field={@form[:tsx]} rows={20} />
-            <div class="mt-4">
-              <button type="submit" name="source" value="tsx" class="btn btn-primary">
-                <span :if={@loading_tsx} class="loading loading-spinner loading-sm"></span> Update
+            <.input type="textarea" field={@form[:tsx]} rows={14} />
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center gap-x-4 justify-between">
+          <div class="flex items-center gap-x-4">
+            <button type="submit" class="btn btn-secondary mb-2">
+              <%= if @loading || @loading_tsx do %>
+                Generating
+              <% else %>
+                Generate
+              <% end %>
+            </button>
+            <.input
+              type="select"
+              field={@form[:model]}
+              form="component-form"
+              options={Schema.models()}
+            />
+          </div>
+          <div id="form-history" phx-hook=".FormHistory">
+            <div :if={@history != []} class="flex items-center text-sm mb-2 ml-2">
+              <span class="mr-2">History</span>
+              <select name="index" phx-change="select-snapshot" class="select">
+                <option
+                  :for={{entry, index} <- Enum.with_index(@history)}
+                  value={index}
+                  selected={index == @history_index}
+                >
+                  {format_timestamp(entry["timestamp"])}
+                </option>
+              </select>
+              <button
+                :if={@history != []}
+                type="button"
+                phx-click="clear-history"
+                data-confirm="Clear all local history for this page?"
+                class="btn btn-ghost"
+              >
+                <.icon name="hero-x-circle" class="size-4" />
               </button>
             </div>
           </div>
@@ -188,13 +165,18 @@
         tabindex="0"
         class="collapse collapse-arrow bg-base-100 border-base-300 border mt-6"
       >
-        <div class="collapse-title font-semibold after:start-5 after:end-auto pe-4 ps-12">
-          Source file
+        <div class="collapse-title font-semibold pe-12">
+          <div class="flex items-center gap-x-2">
+            <.icon name="hero-document-text" class="size-5" />
+            <span>Component file</span>
+          </div>
         </div>
         <div class="collapse-content text-sm">
           <pre class="overflow-x-auto"><code>{@file_content}</code></pre>
         </div>
       </div>
+
+      <div class="my-8 border-b-1 border-base-300 h-1"></div>
 
       <div :if={@component_render_fn && @component_attrs} class="mt-6 space-y-6">
         <div

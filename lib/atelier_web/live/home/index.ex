@@ -100,7 +100,7 @@ defmodule AtelierWeb.Live.Home.Index do
     {:noreply, assign(socket, preview_assigns: params)}
   end
 
-  def handle_event("save", %{"schema" => schema_params} = params, socket) do
+  def handle_event("save", %{"schema" => schema_params} = _params, socket) do
     changeset = Schema.changeset(%Schema{}, schema_params)
 
     case Ecto.Changeset.apply_action(changeset, :validate) do
@@ -110,10 +110,14 @@ defmodule AtelierWeb.Live.Home.Index do
           |> Schema.changeset(%{})
           |> to_form()
 
-        source = params["source"] || "html"
+        active_tab =
+          case schema_params["view_tabs"] do
+            "preview" -> "prompt"
+            value -> String.downcase(value)
+          end
 
         socket =
-          case source do
+          case active_tab do
             "html" ->
               socket
               |> assign(

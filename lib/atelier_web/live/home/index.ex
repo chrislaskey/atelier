@@ -13,7 +13,13 @@ defmodule AtelierWeb.Live.Home.Index do
       |> to_form()
 
     {:ok,
-     assign(socket,
+     socket
+     |> allow_upload(:design_image,
+       accept: ~w(.png .jpg .jpeg .gif .webp),
+       max_entries: 1,
+       max_file_size: 5_000_000
+     )
+     |> assign(
        form: form,
        preview_document: "",
        loading: nil,
@@ -100,6 +106,10 @@ defmodule AtelierWeb.Live.Home.Index do
     {:noreply, assign(socket, preview_assigns: params)}
   end
 
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :design_image, ref)}
+  end
+
   def handle_event("save", %{"schema" => schema_params} = _params, socket) do
     changeset = Schema.changeset(%Schema{}, schema_params)
 
@@ -147,10 +157,16 @@ defmodule AtelierWeb.Live.Home.Index do
               end)
 
             "prompt" ->
+              image_data =
+                consume_uploaded_entries(socket, :design_image, fn %{path: path}, entry ->
+                  {:ok, %{base64: Base.encode64(File.read!(path)), media_type: entry.client_type}}
+                end)
+                |> List.first()
+
               socket
               |> assign(form: form, loading: :elixir)
               |> start_async(:prompt_generate_elixir, fn ->
-                apply_prompt(schema.prompt, schema.elixir, schema.html, schema.model)
+                apply_prompt(schema.prompt, schema.elixir, schema.html, schema.model, image_data)
               end)
           end
 
@@ -414,7 +430,8 @@ defmodule AtelierWeb.Live.Home.Index do
         value =
           case attr.default do
             nil -> ""
-            other -> to_string(other)
+            v when is_binary(v) or is_number(v) or is_boolean(v) or is_atom(v) -> to_string(v)
+            other -> inspect(other)
           end
 
         {to_string(attr.name), value}
@@ -435,6 +452,7 @@ defmodule AtelierWeb.Live.Home.Index do
             :boolean -> raw == "true"
             :integer -> parse_int(raw)
             :float -> parse_float(raw)
+            type when type in [:list, :map, :any] -> attr.default
             _ -> if raw == "", do: nil, else: raw
           end
 
@@ -469,7 +487,7 @@ defmodule AtelierWeb.Live.Home.Index do
     |> to_form()
   end
 
-  defp apply_prompt(prompt, existing_elixir, existing_html, model) do
+  defp apply_prompt(prompt, existing_elixir, existing_html, model, image_data) do
     user_content =
       if existing_elixir != "" do
         """
@@ -493,6 +511,18 @@ defmodule AtelierWeb.Live.Home.Index do
         """
       end
 
+    content =
+      case image_data do
+        %{base64: b64, media_type: mt} ->
+          [
+            %{type: "image", source: %{type: "base64", media_type: mt, data: b64}},
+            %{type: "text", text: user_content}
+          ]
+
+        _ ->
+          user_content
+      end
+
     params = %{
       model: model,
       max_tokens: 4096,
@@ -501,7 +531,7 @@ defmodule AtelierWeb.Live.Home.Index do
       messages: [
         %{
           role: "user",
-          content: user_content
+          content: content
         }
       ]
     }
@@ -678,6 +708,10 @@ defmodule AtelierWeb.Live.Home.Index do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  defp upload_error_to_string(:too_large), do: "Image too large (max 5 MB)"
+  defp upload_error_to_string(:not_accepted), do: "Invalid file type"
+  defp upload_error_to_string(:too_many_files), do: "Only one image allowed"
 
   defp strip_code_fences(text) do
     text

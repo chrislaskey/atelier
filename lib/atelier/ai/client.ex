@@ -5,7 +5,12 @@ defmodule Atelier.AI.Client do
 
   @impl true
   def create_message(params) do
-    case Req.post(@url, headers: headers(), json: params, retry: :transient) do
+    case Req.post(@url,
+           headers: headers(),
+           json: params,
+           retry: :transient,
+           receive_timeout: 300_000
+         ) do
       {:ok, %Req.Response{status: 200, body: body}} ->
         {:ok, body}
 

@@ -1,300 +1,318 @@
 <.flash_group flash={@flash} />
 
-<div class="flex min-h-screen">
-  <.sidebar components={@components} current={@current_component} />
+<div class="flex flex-col min-h-screen">
+  <div class="w-full h-16 pl-0 pr-6 items-center flex justify-between shadow-sm relative z-10">
+    <div class="flex items-center">
+      <div class="w-full h-16 overflow-hidden">
+        <.icon name="hero-paint-brush" class="size-26 -mt-5" />
+      </div>
+      <.link class="tracking-widest text-2xl font-light text-base-800 uppercase" navigate={~p"/"}>
+        Atelier
+      </.link>
+    </div>
+    <.theme_selector />
+  </div>
 
-  <div class="flex-1 p-12">
-    <div class="w-full flex justify-between items-center mb-4">
-      <div class="flex items-center text-sm">
-        <.input
-          type="select"
-          field={@form[:model]}
-          form="component-form"
-          options={Schema.models()}
-        />
-        <div id="form-history" phx-hook=".FormHistory" class="flex items-center text-sm mb-2 ml-2">
-          <span class="mr-2">History</span>
-          <form :if={@history != []} phx-change="select-snapshot">
-            <select name="index" class="select">
-              <option
-                :for={{entry, index} <- Enum.with_index(@history)}
-                value={index}
-                selected={index == @history_index}
-              >
-                {format_timestamp(entry["timestamp"])}
-              </option>
-            </select>
-          </form>
-          <button
-            :if={@history != []}
-            type="button"
-            phx-click="clear-history"
-            data-confirm="Clear all local history for this page?"
-            class="btn btn-ghost"
+  <div class="flex">
+    <.sidebar components={@components} current={@current_component} />
+
+    <div class="flex-1 p-12">
+      <div class="w-full flex justify-between items-center mb-4">
+        <div class="flex items-center text-sm">
+          <.input
+            type="select"
+            field={@form[:model]}
+            form="component-form"
+            options={Schema.models()}
+          />
+          <div
+            id="form-history"
+            phx-hook=".FormHistory"
+            class="flex items-center text-sm mb-2 ml-2"
           >
-            <.icon name="hero-x-circle" class="size-4" />
+            <span class="mr-2">History</span>
+            <form :if={@history != []} phx-change="select-snapshot">
+              <select name="index" class="select">
+                <option
+                  :for={{entry, index} <- Enum.with_index(@history)}
+                  value={index}
+                  selected={index == @history_index}
+                >
+                  {format_timestamp(entry["timestamp"])}
+                </option>
+              </select>
+            </form>
+            <button
+              :if={@history != []}
+              type="button"
+              phx-click="clear-history"
+              data-confirm="Clear all local history for this page?"
+              class="btn btn-ghost"
+            >
+              <.icon name="hero-x-circle" class="size-4" />
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <.theme_selector />
+        </div>
+      </div>
+
+      <.form for={@form} phx-change="validate" phx-submit="save" id="component-form">
+        <div class="flex items-center gap-x-3">
+          <.input
+            type="text"
+            field={@form[:name]}
+            form="component-form"
+            placeholder="Component name"
+          />
+          <button type="button" phx-click="write" class="mb-2 btn">
+            Save to file
           </button>
         </div>
-      </div>
-      <div class="flex items-center gap-4">
-        <.theme_selector />
-      </div>
-    </div>
-
-    <.form for={@form} phx-change="validate" phx-submit="save" id="component-form">
-      <div class="flex items-center gap-x-3">
-        <.input
-          type="text"
-          field={@form[:name]}
-          form="component-form"
-          placeholder="Component name"
-        />
-        <button type="button" phx-click="write" class="mb-2 btn">
-          Save to file
-        </button>
-      </div>
-      <div class="tabs tabs-lift">
-        <input
-          type="radio"
-          name={@form[:view_tabs].name}
-          value="Prompt"
-          class="tab"
-          aria-label="Prompt"
-          checked={@form[:view_tabs].value == "Prompt"}
-        />
-        <div class="tab-content border-base-300 bg-base-100 p-6">
-          <.input
-            type="textarea"
-            field={@form[:prompt]}
-            rows={3}
-            placeholder={
-              if @preview_document == "",
-                do: "Describe what you want to make",
-                else: "Describe what you want to update"
-            }
+        <div class="tabs tabs-lift">
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="Prompt"
+            class="tab"
+            aria-label="Prompt"
+            checked={@form[:view_tabs].value == "Prompt"}
           />
-          <div class="mt-4">
-            <button type="submit" name="source" value="prompt" class="btn btn-primary">
-              <span :if={@loading != nil} class="loading loading-spinner loading-sm"></span>
-              Update
-            </button>
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <.input
+              type="textarea"
+              field={@form[:prompt]}
+              rows={3}
+              placeholder={
+                if @preview_document == "",
+                  do: "Describe what you want to make",
+                  else: "Describe what you want to update"
+              }
+            />
+            <div class="mt-4">
+              <button type="submit" name="source" value="prompt" class="btn btn-primary">
+                <span :if={@loading != nil} class="loading loading-spinner loading-sm"></span>
+                Update
+              </button>
+            </div>
           </div>
-        </div>
 
-        <input
-          type="radio"
-          name={@form[:view_tabs].name}
-          value="Preview"
-          class="tab"
-          aria-label="Preview"
-          checked={@form[:view_tabs].value == "Preview"}
-        />
-        <div class="tab-content border-base-300 bg-base-100 p-6">
-          <iframe
-            :if={@preview_document != ""}
-            srcdoc={@preview_document}
-            class="w-full min-h-64 border-0 rounded-lg"
-            sandbox="allow-scripts allow-same-origin"
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="Preview"
+            class="tab"
+            aria-label="Preview"
+            checked={@form[:view_tabs].value == "Preview"}
           />
-          <p :if={@preview_document == ""} class="text-base-content/50">
-            No element yet. Get started with a prompt
-          </p>
-        </div>
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <iframe
+              :if={@preview_document != ""}
+              srcdoc={@preview_document}
+              class="w-full min-h-64 border-0 rounded-lg"
+              sandbox="allow-scripts allow-same-origin"
+            />
+            <p :if={@preview_document == ""} class="text-base-content/50">
+              No element yet. Get started with a prompt
+            </p>
+          </div>
 
-        <input
-          type="radio"
-          name={@form[:view_tabs].name}
-          value="HTML"
-          class="tab"
-          aria-label="HTML"
-          checked={@form[:view_tabs].value == "HTML"}
-        />
-        <div class="tab-content border-base-300 bg-base-100 p-6">
-          <.input type="textarea" field={@form[:html]} rows={20} />
-          <div class="mt-4">
-            <button type="submit" name="source" value="html" class="btn btn-primary">
-              <span :if={@loading == :elixir} class="loading loading-spinner loading-sm"></span>
-              Update
-            </button>
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="HTML"
+            class="tab"
+            aria-label="HTML"
+            checked={@form[:view_tabs].value == "HTML"}
+          />
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <.input type="textarea" field={@form[:html]} rows={20} />
+            <div class="mt-4">
+              <button type="submit" name="source" value="html" class="btn btn-primary">
+                <span :if={@loading == :elixir} class="loading loading-spinner loading-sm"></span>
+                Update
+              </button>
+            </div>
+          </div>
+
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="Elixir"
+            class="tab"
+            aria-label="Elixir"
+            checked={@form[:view_tabs].value == "Elixir"}
+          />
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <.input type="textarea" field={@form[:elixir]} rows={20} />
+            <div class="mt-4">
+              <button type="submit" name="source" value="elixir" class="btn btn-primary">
+                <span :if={@loading == :html} class="loading loading-spinner loading-sm"></span>
+                Update
+              </button>
+            </div>
+          </div>
+
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="TSX"
+            class="tab"
+            aria-label="TSX"
+            checked={@form[:view_tabs].value == "TSX"}
+          />
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <.input type="textarea" field={@form[:tsx]} rows={20} />
+            <div class="mt-4">
+              <button type="submit" name="source" value="tsx" class="btn btn-primary">
+                <span :if={@loading_tsx} class="loading loading-spinner loading-sm"></span> Update
+              </button>
+            </div>
           </div>
         </div>
+      </.form>
 
-        <input
-          type="radio"
-          name={@form[:view_tabs].name}
-          value="Elixir"
-          class="tab"
-          aria-label="Elixir"
-          checked={@form[:view_tabs].value == "Elixir"}
-        />
-        <div class="tab-content border-base-300 bg-base-100 p-6">
-          <.input type="textarea" field={@form[:elixir]} rows={20} />
-          <div class="mt-4">
-            <button type="submit" name="source" value="elixir" class="btn btn-primary">
-              <span :if={@loading == :html} class="loading loading-spinner loading-sm"></span>
-              Update
-            </button>
-          </div>
-        </div>
-
-        <input
-          type="radio"
-          name={@form[:view_tabs].name}
-          value="TSX"
-          class="tab"
-          aria-label="TSX"
-          checked={@form[:view_tabs].value == "TSX"}
-        />
-        <div class="tab-content border-base-300 bg-base-100 p-6">
-          <.input type="textarea" field={@form[:tsx]} rows={20} />
-          <div class="mt-4">
-            <button type="submit" name="source" value="tsx" class="btn btn-primary">
-              <span :if={@loading_tsx} class="loading loading-spinner loading-sm"></span> Update
-            </button>
-          </div>
-        </div>
-      </div>
-    </.form>
-
-    <div
-      :if={@loading || @loading_tsx}
-      class="flex items-center gap-2 my-6 p-10 text-lg text-base-content/70 rounded-lg border border-gray-300"
-    >
-      <.icon name="hero-sparkles" class="size-6 text-yellow-500 shrink-0" />
-      <span :if={@loading == :elixir}>Generating Elixir...</span>
-      <span :if={@loading == :html}>Generating HTML...</span>
-      <span :if={@loading_tsx}>Generating TSX...</span>
-    </div>
-
-    <div
-      :if={@file_content}
-      tabindex="0"
-      class="collapse collapse-arrow bg-base-100 border-base-300 border mt-6"
-    >
-      <div class="collapse-title font-semibold after:start-5 after:end-auto pe-4 ps-12">
-        Source file
-      </div>
-      <div class="collapse-content text-sm">
-        <pre class="overflow-x-auto"><code>{@file_content}</code></pre>
-      </div>
-    </div>
-
-    <div :if={@component_render_fn && @component_attrs} class="mt-6 space-y-6">
       <div
-        :for={attr <- @component_attrs.attrs}
-        :if={attr.values}
-        class="border border-base-300 rounded-lg p-4"
+        :if={@loading || @loading_tsx}
+        class="flex items-center gap-2 my-6 p-10 text-lg text-base-content/70 rounded-lg border border-gray-300"
       >
-        <div class="text-sm font-semibold mb-3">{attr.name}</div>
-        <div class="flex flex-wrap items-end gap-4">
-          <div :for={value <- attr.values} class="flex flex-col items-center gap-1">
-            <.dynamic_component render_fn={@component_render_fn} {%{attr.name => value}}>
-              {Phoenix.Naming.humanize(to_string(attr.name))}
-            </.dynamic_component>
-            <span class="text-xs text-base-content/50">{value}</span>
+        <.icon name="hero-sparkles" class="size-6 text-yellow-500 shrink-0" />
+        <span :if={@loading == :elixir}>Generating Elixir...</span>
+        <span :if={@loading == :html}>Generating HTML...</span>
+        <span :if={@loading_tsx}>Generating TSX...</span>
+      </div>
+
+      <div
+        :if={@file_content}
+        tabindex="0"
+        class="collapse collapse-arrow bg-base-100 border-base-300 border mt-6"
+      >
+        <div class="collapse-title font-semibold after:start-5 after:end-auto pe-4 ps-12">
+          Source file
+        </div>
+        <div class="collapse-content text-sm">
+          <pre class="overflow-x-auto"><code>{@file_content}</code></pre>
+        </div>
+      </div>
+
+      <div :if={@component_render_fn && @component_attrs} class="mt-6 space-y-6">
+        <div
+          :for={attr <- @component_attrs.attrs}
+          :if={attr.values}
+          class="border border-base-300 rounded-lg p-4"
+        >
+          <div class="text-sm font-semibold mb-3">{attr.name}</div>
+          <div class="flex flex-wrap items-end gap-4">
+            <div :for={value <- attr.values} class="flex flex-col items-center gap-1">
+              <.dynamic_component render_fn={@component_render_fn} {%{attr.name => value}}>
+                {Phoenix.Naming.humanize(to_string(attr.name))}
+              </.dynamic_component>
+              <span class="text-xs text-base-content/50">{value}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div
-      :if={@component_render_fn && @component_attrs}
-      class="mt-6 border border-base-300 rounded-lg p-4"
-    >
-      <div class="text-sm font-semibold mb-3">Custom preview</div>
+      <div
+        :if={@component_render_fn && @component_attrs}
+        class="mt-6 border border-base-300 rounded-lg p-4"
+      >
+        <div class="text-sm font-semibold mb-3">Custom preview</div>
 
-      <div class="flex gap-6">
-        <div class="flex-1 flex items-center justify-center p-4 border border-base-300 rounded-lg bg-base-100">
-          <.dynamic_component
-            render_fn={@component_render_fn}
-            {cast_preview_assigns(@preview_assigns, @component_attrs)}
-          >
-            {Map.get(@preview_assigns, "inner_block_text", "Hello")}
-          </.dynamic_component>
-        </div>
-
-        <form phx-change="preview-change" class="flex-1 space-y-2">
-          <div :for={attr <- @component_attrs.attrs} class="flex items-center gap-2">
-            <label class="text-sm w-28 text-right shrink-0">{attr.name}</label>
-            <select
-              :if={attr.values}
-              name={"preview[#{attr.name}]"}
-              class="select select-sm flex-1"
+        <div class="flex gap-6">
+          <div class="flex-1 flex items-center justify-center p-4 border border-base-300 rounded-lg bg-base-100">
+            <.dynamic_component
+              render_fn={@component_render_fn}
+              {cast_preview_assigns(@preview_assigns, @component_attrs)}
             >
-              <option
-                :for={v <- attr.values}
-                value={v}
-                selected={Map.get(@preview_assigns, to_string(attr.name)) == v}
+              {Map.get(@preview_assigns, "inner_block_text", "Hello")}
+            </.dynamic_component>
+          </div>
+
+          <form phx-change="preview-change" class="flex-1 space-y-2">
+            <div :for={attr <- @component_attrs.attrs} class="flex items-center gap-2">
+              <label class="text-sm w-28 text-right shrink-0">{attr.name}</label>
+              <select
+                :if={attr.values}
+                name={"preview[#{attr.name}]"}
+                class="select select-sm flex-1"
               >
-                {v}
-              </option>
-            </select>
-            <input
-              :if={attr.type == :boolean}
-              type="hidden"
-              name={"preview[#{attr.name}]"}
-              value="false"
-            />
-            <input
-              :if={attr.type == :boolean}
-              type="checkbox"
-              name={"preview[#{attr.name}]"}
-              value="true"
-              checked={Map.get(@preview_assigns, to_string(attr.name)) == "true"}
-              class="checkbox checkbox-sm"
-            />
-            <input
-              :if={!attr.values && attr.type != :boolean}
-              type="text"
-              name={"preview[#{attr.name}]"}
-              value={Map.get(@preview_assigns, to_string(attr.name), "")}
-              class="input input-sm flex-1"
-            />
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-sm w-28 text-right shrink-0">inner_block</label>
-            <input
-              type="text"
-              name="preview[inner_block_text]"
-              value={Map.get(@preview_assigns, "inner_block_text", "Hello")}
-              class="input input-sm flex-1"
-            />
-          </div>
-        </form>
+                <option
+                  :for={v <- attr.values}
+                  value={v}
+                  selected={Map.get(@preview_assigns, to_string(attr.name)) == v}
+                >
+                  {v}
+                </option>
+              </select>
+              <input
+                :if={attr.type == :boolean}
+                type="hidden"
+                name={"preview[#{attr.name}]"}
+                value="false"
+              />
+              <input
+                :if={attr.type == :boolean}
+                type="checkbox"
+                name={"preview[#{attr.name}]"}
+                value="true"
+                checked={Map.get(@preview_assigns, to_string(attr.name)) == "true"}
+                class="checkbox checkbox-sm"
+              />
+              <input
+                :if={!attr.values && attr.type != :boolean}
+                type="text"
+                name={"preview[#{attr.name}]"}
+                value={Map.get(@preview_assigns, to_string(attr.name), "")}
+                class="input input-sm flex-1"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm w-28 text-right shrink-0">inner_block</label>
+              <input
+                type="text"
+                name="preview[inner_block_text]"
+                value={Map.get(@preview_assigns, "inner_block_text", "Hello")}
+                class="input input-sm flex-1"
+              />
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
 
-    <script :type={Phoenix.LiveView.ColocatedHook} name=".FormHistory">
-      export default {
-        mounted() {
-          this._pathname = window.location.pathname;
-          this._loadHistory();
-
-          this.handleEvent("persist-history", ({ entries }) => {
-            const key = `atelier:history:${window.location.pathname}`;
-            localStorage.setItem(key, JSON.stringify(entries));
-          });
-        },
-        updated() {
-          if (this._pathname !== window.location.pathname) {
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".FormHistory">
+        export default {
+          mounted() {
             this._pathname = window.location.pathname;
             this._loadHistory();
-          }
-        },
-        _loadHistory() {
-          const key = `atelier:history:${window.location.pathname}`;
-          const stored = localStorage.getItem(key);
 
-          try {
-            const entries = stored ? JSON.parse(stored) : [];
-            if (Array.isArray(entries)) {
-              this.pushEvent("restore-history", { entries });
+            this.handleEvent("persist-history", ({ entries }) => {
+              const key = `atelier:history:${window.location.pathname}`;
+              localStorage.setItem(key, JSON.stringify(entries));
+            });
+          },
+          updated() {
+            if (this._pathname !== window.location.pathname) {
+              this._pathname = window.location.pathname;
+              this._loadHistory();
             }
-          } catch (e) {
-            console.warn("Failed to parse form history", e);
+          },
+          _loadHistory() {
+            const key = `atelier:history:${window.location.pathname}`;
+            const stored = localStorage.getItem(key);
+
+            try {
+              const entries = stored ? JSON.parse(stored) : [];
+              if (Array.isArray(entries)) {
+                this.pushEvent("restore-history", { entries });
+              }
+            } catch (e) {
+              console.warn("Failed to parse form history", e);
+            }
           }
         }
-      }
-    </script>
+      </script>
+    </div>
   </div>
 </div>

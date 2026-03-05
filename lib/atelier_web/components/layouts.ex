@@ -120,26 +120,28 @@ defmodule AtelierWeb.Layouts do
 
   def sidebar(assigns) do
     ~H"""
-    <nav class="w-48 shrink-0 bg-base-200 p-8">
-      <div class="font-bold mb-2">Components</div>
-      <ul :for={group <- @components} class="menu menu-xs bg-base-200 w-full">
-        <li>
-          <details open>
-            <summary>
-              <.icon name="hero-folder" class="size-3" />
-              {group.path}
-            </summary>
-            <ul>
-              <li :for={file <- group.files}>
-                <.link patch={"/#{file.name}"} class={@current == file.name && "active"}>
-                  <.icon name="hero-document-text" class="size-3" />
-                  {file.filename}
-                </.link>
-              </li>
-            </ul>
-          </details>
-        </li>
-      </ul>
+    <nav class="w-80 shrink-0 bg-base-200 py-8 px-6">
+      <div class="w-full overflow-x-auto">
+        <div class="font-bold mb-2 text-sm">Components</div>
+        <ul :for={group <- @components} class="menu menu-xs w-full">
+          <li>
+            <details open>
+              <summary>
+                <.icon name="hero-folder" class="size-3" />
+                <span class="whitespace-nowrap">{group.path}</span>
+              </summary>
+              <ul>
+                <li :for={file <- group.files}>
+                  <.link patch={"/#{file.name}"} class={@current == file.name && "active"}>
+                    <.icon name="hero-document-text" class="size-3" />
+                    {file.filename}
+                  </.link>
+                </li>
+              </ul>
+            </details>
+          </li>
+        </ul>
+      </div>
     </nav>
     """
   end

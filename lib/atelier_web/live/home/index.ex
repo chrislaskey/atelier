@@ -31,7 +31,9 @@ defmodule AtelierWeb.Live.Home.Index do
   end
 
   @impl true
-  def handle_params(%{"path" => [name]}, _uri, socket) do
+  def handle_params(%{"path" => [name]}, uri, socket) do
+    socket = assign(socket, :uri, uri)
+
     case Atelier.Components.read(name) do
       {:ok, data} ->
         form =

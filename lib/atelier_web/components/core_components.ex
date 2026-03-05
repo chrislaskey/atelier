@@ -45,7 +45,14 @@ defmodule AtelierWeb.CoreComponents do
     {render_fn, assigns} = Map.pop(assigns, :render_fn)
 
     try do
-      render_fn.(assigns)
+      rendered = render_fn.(assigns)
+      # Force full evaluation of lazy nested components to catch errors here
+      html = rendered |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+      assigns = assign(%{__changed__: %{}}, html: html)
+
+      ~H"""
+      {Phoenix.HTML.raw(@html)}
+      """
     rescue
       e ->
         assigns = assign(%{__changed__: %{}}, error: Exception.message(e))

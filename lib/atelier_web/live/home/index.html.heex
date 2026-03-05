@@ -37,7 +37,7 @@
         </div>
       </div>
       <div class="flex items-center gap-4">
-        <.theme_selector preview_only />
+        <.theme_selector />
       </div>
     </div>
 
@@ -100,7 +100,6 @@
             No element yet. Get started with a prompt
           </p>
         </div>
-
 
         <input
           type="radio"
@@ -198,10 +197,22 @@
       </div>
     </div>
 
-    <div :if={@component_render_fn && @component_attrs} class="mt-6 border border-base-300 rounded-lg p-4">
+    <div
+      :if={@component_render_fn && @component_attrs}
+      class="mt-6 border border-base-300 rounded-lg p-4"
+    >
       <div class="text-sm font-semibold mb-3">Custom preview</div>
 
       <div class="flex gap-6">
+        <div class="flex-1 flex items-center justify-center p-4 border border-base-300 rounded-lg bg-base-100">
+          <.dynamic_component
+            render_fn={@component_render_fn}
+            {cast_preview_assigns(@preview_assigns, @component_attrs)}
+          >
+            {Map.get(@preview_assigns, "inner_block_text", "Hello")}
+          </.dynamic_component>
+        </div>
+
         <form phx-change="preview-change" class="flex-1 space-y-2">
           <div :for={attr <- @component_attrs.attrs} class="flex items-center gap-2">
             <label class="text-sm w-28 text-right shrink-0">{attr.name}</label>
@@ -250,15 +261,6 @@
             />
           </div>
         </form>
-
-        <div class="flex-1 flex items-center justify-center p-4 border border-base-300 rounded-lg bg-base-100">
-          <.dynamic_component
-            render_fn={@component_render_fn}
-            {cast_preview_assigns(@preview_assigns, @component_attrs)}
-          >
-            {Map.get(@preview_assigns, "inner_block_text", "Hello")}
-          </.dynamic_component>
-        </div>
       </div>
     </div>
 

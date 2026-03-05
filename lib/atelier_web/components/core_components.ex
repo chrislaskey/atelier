@@ -43,7 +43,17 @@ defmodule AtelierWeb.CoreComponents do
   """
   def dynamic_component(assigns) do
     {render_fn, assigns} = Map.pop(assigns, :render_fn)
-    render_fn.(assigns)
+
+    try do
+      render_fn.(assigns)
+    rescue
+      e ->
+        assigns = assign(%{__changed__: %{}}, error: Exception.message(e))
+
+        ~H"""
+        <div class="text-error text-sm italic">Error: {@error}</div>
+        """
+    end
   end
 
   alias Phoenix.LiveView.JS

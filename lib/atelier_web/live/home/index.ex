@@ -25,7 +25,8 @@ defmodule AtelierWeb.Live.Home.Index do
        file_content: nil,
        file_updated_at: nil,
        component_render_fn: nil,
-       component_attrs: nil
+       component_attrs: nil,
+       preview_assigns: %{}
      )}
   end
 
@@ -52,6 +53,7 @@ defmodule AtelierWeb.Live.Home.Index do
            file_updated_at: data.updated_at,
            component_render_fn: resolve_render_fn(name),
            component_attrs: Atelier.Components.introspect(name),
+           preview_assigns: build_default_preview_assigns(Atelier.Components.introspect(name)),
            history: [],
            history_index: 0
          )}
@@ -64,6 +66,7 @@ defmodule AtelierWeb.Live.Home.Index do
            file_updated_at: nil,
            component_render_fn: nil,
            component_attrs: nil,
+           preview_assigns: %{},
            history: [],
            history_index: 0
          )}
@@ -78,6 +81,7 @@ defmodule AtelierWeb.Live.Home.Index do
        file_updated_at: nil,
        component_render_fn: nil,
        component_attrs: nil,
+       preview_assigns: %{},
        history: [],
        history_index: 0
      )}
@@ -88,6 +92,10 @@ defmodule AtelierWeb.Live.Home.Index do
     changeset = Schema.changeset(%Schema{}, schema_params)
 
     {:noreply, assign(socket, form: to_form(changeset))}
+  end
+
+  def handle_event("preview-change", %{"preview" => params}, socket) do
+    {:noreply, assign(socket, preview_assigns: params)}
   end
 
   def handle_event("save", %{"schema" => schema_params} = params, socket) do
@@ -389,6 +397,61 @@ defmodule AtelierWeb.Live.Home.Index do
 
     if Code.ensure_loaded?(module) and function_exported?(module, func, 1) do
       Function.capture(module, func, 1)
+    end
+  end
+
+  defp build_default_preview_assigns(nil), do: %{}
+
+  defp build_default_preview_assigns(%{attrs: attrs}) do
+    defaults =
+      Map.new(attrs, fn attr ->
+        value =
+          case attr.default do
+            nil -> ""
+            other -> to_string(other)
+          end
+
+        {to_string(attr.name), value}
+      end)
+
+    Map.put(defaults, "inner_block_text", "Hello")
+  end
+
+  defp cast_preview_assigns(preview_assigns, component_attrs) do
+    if component_attrs == nil do
+      %{}
+    else
+      Enum.reduce(component_attrs.attrs, %{}, fn attr, acc ->
+        raw = Map.get(preview_assigns, to_string(attr.name))
+
+        value =
+          case attr.type do
+            :boolean -> raw == "true"
+            :integer -> parse_int(raw)
+            :float -> parse_float(raw)
+            _ -> if raw == "", do: nil, else: raw
+          end
+
+        Map.put(acc, attr.name, value)
+      end)
+    end
+  end
+
+  defp parse_int(nil), do: nil
+
+  defp parse_int(s) do
+    case Integer.parse(s) do
+      {n, _} -> n
+      :error -> nil
+    end
+  end
+
+  defp parse_float(nil), do: nil
+
+  defp parse_float(s) do
+    case Float.parse(s) do
+      {n, _} -> n
+      :error -> nil
     end
   end
 

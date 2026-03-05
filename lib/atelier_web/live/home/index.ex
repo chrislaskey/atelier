@@ -23,7 +23,9 @@ defmodule AtelierWeb.Live.Home.Index do
        components: Atelier.Components.list(),
        current_component: nil,
        file_content: nil,
-       file_updated_at: nil
+       file_updated_at: nil,
+       component_render_fn: nil,
+       component_attrs: nil
      )}
   end
 
@@ -48,6 +50,8 @@ defmodule AtelierWeb.Live.Home.Index do
            preview_document: build_preview_document(data.html),
            file_content: data.file_content,
            file_updated_at: data.updated_at,
+           component_render_fn: resolve_render_fn(name),
+           component_attrs: Atelier.Components.introspect(name),
            history: [],
            history_index: 0
          )}
@@ -58,6 +62,8 @@ defmodule AtelierWeb.Live.Home.Index do
            current_component: name,
            file_content: nil,
            file_updated_at: nil,
+           component_render_fn: nil,
+           component_attrs: nil,
            history: [],
            history_index: 0
          )}
@@ -70,6 +76,8 @@ defmodule AtelierWeb.Live.Home.Index do
        current_component: nil,
        file_content: nil,
        file_updated_at: nil,
+       component_render_fn: nil,
+       component_attrs: nil,
        history: [],
        history_index: 0
      )}
@@ -372,6 +380,15 @@ defmodule AtelierWeb.Live.Home.Index do
     case DateTime.from_iso8601(timestamp_str) do
       {:ok, dt, _} -> Calendar.strftime(dt, "%-I:%M:%S %p UTC")
       _ -> timestamp_str
+    end
+  end
+
+  defp resolve_render_fn(name) do
+    module = Module.concat(AtelierWeb.Components, Macro.camelize(name))
+    func = name |> String.split(".") |> List.last() |> Macro.underscore() |> String.to_atom()
+
+    if Code.ensure_loaded?(module) and function_exported?(module, func, 1) do
+      Function.capture(module, func, 1)
     end
   end
 

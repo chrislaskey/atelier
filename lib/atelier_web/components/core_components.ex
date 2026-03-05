@@ -29,6 +29,23 @@ defmodule AtelierWeb.CoreComponents do
   use Phoenix.Component
   use Gettext, backend: AtelierWeb.Gettext
 
+  @doc """
+  Renders a component dynamically from a captured function reference.
+
+  HEEx constructs assigns with proper `__changed__` tracking, which is then
+  forwarded to the target component function via the capture.
+
+  ## Examples
+
+      <.dynamic_component render_fn={&MyModule.button/1} size="small">
+        Click me
+      </.dynamic_component>
+  """
+  def dynamic_component(assigns) do
+    {render_fn, assigns} = Map.pop(assigns, :render_fn)
+    render_fn.(assigns)
+  end
+
   alias Phoenix.LiveView.JS
 
   @doc """

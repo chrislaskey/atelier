@@ -17,7 +17,7 @@ defmodule AtelierWeb.Live.Home.Index.Schema do
     field :tsx, :string, default: ""
     field :prompt, :string, default: ""
     field :model, :string, default: "claude-sonnet-4-6"
-    field :view_tabs, :string, default: "Preview"
+    field :view_tabs, :string, default: "Prompt"
   end
 
   def changeset(component \\ %__MODULE__{}, attrs) do

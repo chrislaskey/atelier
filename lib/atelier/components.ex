@@ -4,10 +4,10 @@ defmodule Atelier.Components do
   @dir Path.join(File.cwd!(), "lib/atelier_web/components/atelier")
 
   def list do
-    list_tree(@dir, "")
+    list_flat(@dir, "")
   end
 
-  defp list_tree(dir, prefix) do
+  defp list_flat(dir, prefix) do
     case File.ls(dir) do
       {:ok, entries} ->
         entries = Enum.sort(entries)
@@ -15,21 +15,30 @@ defmodule Atelier.Components do
         {dirs, files} =
           Enum.split_with(entries, &File.dir?(Path.join(dir, &1)))
 
-        dir_nodes =
-          Enum.flat_map(dirs, fn entry ->
-            children = list_tree(Path.join(dir, entry), prefix <> entry <> "/")
-            if children == [], do: [], else: [%{type: :dir, label: entry, children: children}]
-          end)
-
         file_nodes =
           files
           |> Enum.filter(&String.ends_with?(&1, ".ex"))
           |> Enum.map(fn file ->
             leaf = String.trim_trailing(file, ".ex")
-            %{type: :file, name: Macro.camelize(prefix <> leaf), label: leaf}
+            %{name: Macro.camelize(prefix <> leaf), filename: file}
           end)
 
-        dir_nodes ++ file_nodes
+        current_group =
+          if file_nodes != [] do
+            rel_path = Path.relative_to(@dir, File.cwd!())
+            path = if prefix == "", do: rel_path <> "/", else: rel_path <> "/" <> prefix
+
+            [%{path: path, files: file_nodes}]
+          else
+            []
+          end
+
+        sub_groups =
+          Enum.flat_map(dirs, fn entry ->
+            list_flat(Path.join(dir, entry), prefix <> entry <> "/")
+          end)
+
+        current_group ++ sub_groups
 
       {:error, _} ->
         []
@@ -55,6 +64,34 @@ defmodule Atelier.Components do
 
       {:error, _} ->
         :error
+    end
+  end
+
+  def introspect(name) do
+    module = Module.concat(AtelierWeb.Components, Macro.camelize(name))
+    func = name |> String.split(".") |> List.last() |> Macro.underscore() |> String.to_atom()
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :__components__, 0) do
+      case module.__components__() do
+        %{^func => %{attrs: attrs, slots: slots}} ->
+          attrs =
+            attrs
+            |> Enum.reject(&(&1.type == :global))
+            |> Enum.map(fn attr ->
+              %{
+                name: attr.name,
+                type: attr.type,
+                required: attr.required,
+                default: attr.opts[:default],
+                values: attr.opts[:values]
+              }
+            end)
+
+          %{attrs: attrs, slots: slots}
+
+        _ ->
+          nil
+      end
     end
   end
 

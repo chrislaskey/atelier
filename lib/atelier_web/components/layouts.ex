@@ -121,34 +121,26 @@ defmodule AtelierWeb.Layouts do
   def sidebar(assigns) do
     ~H"""
     <nav class="w-48 shrink-0 bg-base-200 p-8">
-      <div class="font-bold">Components</div>
-      <ul class="menu menu-sm bg-base-200 rounded-box w-full">
-        <.tree_node :for={node <- @components} node={node} current={@current} />
+      <div class="font-bold mb-2">Components</div>
+      <ul :for={group <- @components} class="menu menu-xs bg-base-200 w-full">
+        <li>
+          <details open>
+            <summary>
+              <.icon name="hero-folder" class="size-3" />
+              {group.path}
+            </summary>
+            <ul>
+              <li :for={file <- group.files}>
+                <.link patch={"/#{file.name}"} class={@current == file.name && "active"}>
+                  <.icon name="hero-document-text" class="size-3" />
+                  {file.filename}
+                </.link>
+              </li>
+            </ul>
+          </details>
+        </li>
       </ul>
     </nav>
-    """
-  end
-
-  defp tree_node(%{node: %{type: :dir}} = assigns) do
-    ~H"""
-    <li>
-      <details open>
-        <summary>{@node.label}</summary>
-        <ul>
-          <.tree_node :for={node <- @node.children} node={node} current={@current} />
-        </ul>
-      </details>
-    </li>
-    """
-  end
-
-  defp tree_node(%{node: %{type: :file}} = assigns) do
-    ~H"""
-    <li>
-      <.link patch={"/#{@node.name}"} class={@current == @node.name && "active"}>
-        {@node.label}
-      </.link>
-    </li>
     """
   end
 

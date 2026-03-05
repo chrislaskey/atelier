@@ -74,11 +74,12 @@ defmodule Atelier.Components do
   def introspect(name) do
     stem = String.trim_trailing(name, ".ex")
     module = Module.concat(AtelierWeb.Components, Macro.camelize(stem))
-    func = stem |> Path.basename() |> String.to_atom()
 
     if Code.ensure_loaded?(module) and function_exported?(module, :__components__, 0) do
       case module.__components__() do
-        %{^func => %{attrs: attrs, slots: slots}} ->
+        components when map_size(components) > 0 ->
+          {_func, %{attrs: attrs, slots: slots}} = Enum.at(components, 0)
+
           attrs =
             attrs
             |> Enum.reject(&(&1.type == :global))

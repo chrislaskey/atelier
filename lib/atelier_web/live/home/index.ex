@@ -426,10 +426,19 @@ defmodule AtelierWeb.Live.Home.Index do
   defp resolve_render_fn(name) do
     stem = String.trim_trailing(name, ".ex")
     module = Module.concat(AtelierWeb.Components, Macro.camelize(stem))
-    func = stem |> Path.basename() |> String.to_atom()
 
-    if Code.ensure_loaded?(module) and function_exported?(module, func, 1) do
-      Function.capture(module, func, 1)
+    if Code.ensure_loaded?(module) and function_exported?(module, :__components__, 0) do
+      case module.__components__() do
+        components when map_size(components) > 0 ->
+          {func, _} = Enum.at(components, 0)
+
+          if function_exported?(module, func, 1) do
+            Function.capture(module, func, 1)
+          end
+
+        _ ->
+          nil
+      end
     end
   end
 

@@ -17,18 +17,16 @@
     <.sidebar components={@components} current={@current_component} />
 
     <div class="flex-1 p-12">
+      <h1 :if={@current_component} class="text-4xl mb-6">
+        <span class="font-light">
+          {@current_component |> String.trim_trailing(".ex") |> Macro.camelize()}
+        </span>
+        <span class="font-thin opacity-50">{@current_component}</span>
+      </h1>
+      <h1 :if={!@current_component} class="text-4xl mb-6">
+        <span class="font-light">New component</span>
+      </h1>
       <.form for={@form} phx-change="validate" phx-submit="save" id="component-form">
-        <div class="my-3 flex items-center gap-x-3">
-          <.input
-            type="text"
-            field={@form[:name]}
-            form="component-form"
-            placeholder="Component name"
-          />
-          <button type="button" phx-click="write" class="mb-2 btn">
-            Save component file
-          </button>
-        </div>
         <div class="tabs tabs-lift">
           <input
             type="radio"
@@ -194,17 +192,45 @@
             </div>
           </div>
         </div>
-      </.form>
 
-      <div
-        :if={@loading || @loading_tsx}
-        class="flex items-center gap-2 my-6 p-10 text-lg text-base-content/70 rounded-lg border border-gray-300"
-      >
-        <.icon name="hero-sparkles" class="size-6 text-yellow-500 shrink-0" />
-        <span :if={@loading == :elixir}>Generating Elixir...</span>
-        <span :if={@loading == :html}>Generating HTML...</span>
-        <span :if={@loading_tsx}>Generating TSX...</span>
-      </div>
+        <div
+          :if={@loading || @loading_tsx}
+          class="flex items-center gap-2 my-6 p-6 text-lg text-base-content/70 rounded-lg border border-gray-300"
+        >
+          <.icon name="hero-sparkles" class="size-6 text-yellow-500 shrink-0" />
+          <span :if={@loading == :elixir}>Generating Elixir...</span>
+          <span :if={@loading == :html}>Generating HTML...</span>
+          <span :if={@loading_tsx}>Generating TSX...</span>
+        </div>
+
+        <div
+          :if={!@loading && !@loading_tsx && has_unsaved_changes?(@history, @file_updated_at)}
+          class="flex items-center gap-2 my-6 p-6 rounded-lg border border-gray-300"
+        >
+          <.icon name="hero-check-circle" class="size-8 text-green-600 shrink-0 mt-0.5" />
+          <div class="flex flex-col">
+            <span class="text-lg text-base-content/90">
+              Unsaved updates are ready for review
+            </span>
+            <span class="text-sm text-base-content/70">
+              Review the changes above. If you're happy with it, save the component file.
+              If you're not, use the prompt or code tabs to make edits before saving.
+            </span>
+          </div>
+        </div>
+
+        <div class="my-3 flex items-center gap-x-3">
+          <button type="button" phx-click="write" class="mb-2 btn btn-primary">
+            Save updates
+          </button>
+          <.input
+            type="text"
+            field={@form[:name]}
+            form="component-form"
+            placeholder="file/path.ex"
+          />
+        </div>
+      </.form>
 
       <div
         :if={@file_content}

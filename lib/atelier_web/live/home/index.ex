@@ -37,7 +37,8 @@ defmodule AtelierWeb.Live.Home.Index do
   end
 
   @impl true
-  def handle_params(%{"path" => [name]}, uri, socket) do
+  def handle_params(%{"path" => segments}, uri, socket) do
+    name = Enum.join(segments, "/")
     socket = assign(socket, :uri, uri)
 
     case Atelier.Components.read(name) do
@@ -235,7 +236,10 @@ defmodule AtelierWeb.Live.Home.Index do
         {:ok, path} ->
           socket
           |> put_flash(:info, "Wrote #{path}")
-          |> assign(components: Atelier.Components.list())
+          |> assign(
+            components: Atelier.Components.list(),
+            file_updated_at: DateTime.utc_now() |> DateTime.to_iso8601()
+          )
 
         {:error, reason} ->
           put_flash(socket, :error, reason)
@@ -397,6 +401,12 @@ defmodule AtelierWeb.Live.Home.Index do
     |> to_form()
   end
 
+  defp has_unsaved_changes?([] = _history, _file_updated_at), do: false
+
+  defp has_unsaved_changes?([latest | _], file_updated_at) do
+    !file_is_newer?(file_updated_at, latest["timestamp"])
+  end
+
   defp file_is_newer?(nil, _history_timestamp), do: false
   defp file_is_newer?(_file_timestamp, nil), do: true
 
@@ -414,8 +424,9 @@ defmodule AtelierWeb.Live.Home.Index do
   end
 
   defp resolve_render_fn(name) do
-    module = Module.concat(AtelierWeb.Components, Macro.camelize(name))
-    func = name |> String.split(".") |> List.last() |> Macro.underscore() |> String.to_atom()
+    stem = String.trim_trailing(name, ".ex")
+    module = Module.concat(AtelierWeb.Components, Macro.camelize(stem))
+    func = stem |> Path.basename() |> String.to_atom()
 
     if Code.ensure_loaded?(module) and function_exported?(module, func, 1) do
       Function.capture(module, func, 1)

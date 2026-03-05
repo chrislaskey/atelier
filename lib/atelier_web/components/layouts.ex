@@ -124,25 +124,35 @@ defmodule AtelierWeb.Layouts do
       <div class="w-full overflow-x-auto">
         <div class="font-bold mb-2 text-sm">Components</div>
         <ul :for={group <- @components} class="menu menu-xs w-full">
-          <li>
-            <details open>
-              <summary>
-                <.icon name="hero-folder" class="size-3" />
-                <span class="whitespace-nowrap">{group.path}</span>
-              </summary>
-              <ul>
-                <li :for={file <- group.files}>
-                  <.link patch={"/#{file.name}"} class={@current == file.name && "active"}>
-                    <.icon name="hero-document" class="size-3" />
-                    {file.filename}
-                  </.link>
-                </li>
-              </ul>
-            </details>
-          </li>
+          <.dir_node node={group} current={@current} />
         </ul>
       </div>
     </nav>
+    """
+  end
+
+  attr :node, :map, required: true
+  attr :current, :string, default: nil
+
+  defp dir_node(assigns) do
+    ~H"""
+    <li>
+      <details open>
+        <summary>
+          <.icon name="hero-folder" class="size-3" />
+          <span class="whitespace-nowrap">{@node.label}</span>
+        </summary>
+        <ul>
+          <li :for={file <- @node.files}>
+            <.link patch={"/#{file.name}"} class={@current == file.name && "active"}>
+              <.icon name="hero-document" class="size-3" />
+              {file.filename}
+            </.link>
+          </li>
+          <.dir_node :for={child <- @node.children} node={child} current={@current} />
+        </ul>
+      </details>
+    </li>
     """
   end
 

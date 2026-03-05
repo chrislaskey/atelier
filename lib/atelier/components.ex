@@ -4,10 +4,16 @@ defmodule Atelier.Components do
   @dir Path.join(File.cwd!(), "lib/atelier_web/components/atelier")
 
   def list do
-    list_flat(@dir, "")
+    node = list_tree(@dir, "")
+
+    if node.files == [] and node.children == [] do
+      []
+    else
+      [node]
+    end
   end
 
-  defp list_flat(dir, prefix) do
+  defp list_tree(dir, prefix) do
     case File.ls(dir) do
       {:ok, entries} ->
         entries = Enum.sort(entries)
@@ -19,34 +25,32 @@ defmodule Atelier.Components do
           files
           |> Enum.filter(&String.ends_with?(&1, ".ex"))
           |> Enum.map(fn file ->
-            leaf = String.trim_trailing(file, ".ex")
-            %{name: Macro.camelize(prefix <> leaf), filename: file}
+            %{name: prefix <> file, filename: file}
           end)
 
-        current_group =
-          if file_nodes != [] do
-            rel_path = Path.relative_to(@dir, File.cwd!())
-            path = if prefix == "", do: rel_path <> "/", else: rel_path <> "/" <> prefix
+        children =
+          dirs
+          |> Enum.map(fn entry ->
+            list_tree(Path.join(dir, entry), prefix <> entry <> "/")
+          end)
+          |> Enum.reject(fn node -> node.files == [] and node.children == [] end)
 
-            [%{path: path, files: file_nodes}]
+        label =
+          if prefix == "" do
+            Path.relative_to(@dir, File.cwd!()) <> "/"
           else
-            []
+            prefix |> String.trim_trailing("/") |> Path.basename()
           end
 
-        sub_groups =
-          Enum.flat_map(dirs, fn entry ->
-            list_flat(Path.join(dir, entry), prefix <> entry <> "/")
-          end)
-
-        current_group ++ sub_groups
+        %{label: label, files: file_nodes, children: children}
 
       {:error, _} ->
-        []
+        %{label: "", files: [], children: []}
     end
   end
 
   def read(name) do
-    path = Path.join(@dir, Macro.underscore(name) <> ".ex")
+    path = Path.join(@dir, name)
 
     case File.read(path) do
       {:ok, content} ->
@@ -54,7 +58,7 @@ defmodule Atelier.Components do
 
         {:ok,
          %{
-           name: metadata[:name] || name,
+           name: name,
            elixir: extract_user_code(content),
            html: metadata[:html] || "",
            tsx: extract_tsx(content),
@@ -68,8 +72,9 @@ defmodule Atelier.Components do
   end
 
   def introspect(name) do
-    module = Module.concat(AtelierWeb.Components, Macro.camelize(name))
-    func = name |> String.split(".") |> List.last() |> Macro.underscore() |> String.to_atom()
+    stem = String.trim_trailing(name, ".ex")
+    module = Module.concat(AtelierWeb.Components, Macro.camelize(stem))
+    func = stem |> Path.basename() |> String.to_atom()
 
     if Code.ensure_loaded?(module) and function_exported?(module, :__components__, 0) do
       case module.__components__() do
@@ -96,9 +101,10 @@ defmodule Atelier.Components do
   end
 
   def write(%{name: name} = attrs) when name != "" do
-    module_name = "AtelierWeb.Components." <> Macro.camelize(name)
-    file_name = Macro.underscore(name) <> ".ex"
-    path = Path.join(@dir, file_name)
+    name = if String.ends_with?(name, ".ex"), do: name, else: name <> ".ex"
+    stem = String.trim_trailing(name, ".ex")
+    module_name = "AtelierWeb.Components." <> Macro.camelize(stem)
+    path = Path.join(@dir, name)
 
     File.mkdir_p!(Path.dirname(path))
 
@@ -111,7 +117,7 @@ defmodule Atelier.Components do
             html_heredoc: indent(Map.get(attrs, :html, ""), 4),
             tsx: Map.get(attrs, :tsx, ""),
             tsx_heredoc: indent(Map.get(attrs, :tsx, ""), 6),
-            js_export_name: name |> Macro.camelize() |> String.replace(".", ""),
+            js_export_name: stem |> Macro.camelize() |> String.replace(".", ""),
             updated_at: DateTime.utc_now() |> DateTime.to_iso8601()
           })
       )
@@ -136,7 +142,8 @@ defmodule Atelier.Components do
   end
 
   defp load_metadata(name) do
-    module = Module.concat(AtelierWeb.Components, Macro.camelize(name))
+    stem = String.trim_trailing(name, ".ex")
+    module = Module.concat(AtelierWeb.Components, Macro.camelize(stem))
 
     if Code.ensure_loaded?(module) do
       metadata =

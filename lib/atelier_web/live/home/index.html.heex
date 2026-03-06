@@ -10,7 +10,13 @@
         Atelier
       </.link>
     </div>
-    <.theme_selector />
+    <div class="flex items-center gap-x-1">
+      <.link navigate={~p"/"} class="btn hover:btn-accent btn-ghost">
+        <.icon name="hero-plus" class="size-5" />
+        <span>New component</span>
+      </.link>
+      <.theme_selector />
+    </div>
   </div>
 
   <div class="flex">

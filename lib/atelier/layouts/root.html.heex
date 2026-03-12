@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" phx-socket={live_socket_path(@conn)}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={Phoenix.Controller.get_csrf_token()} />
+    <title>Atelier</title>
+
+    <!-- DaisyUI + Tailwind from CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <!-- Atelier JS (bundled, served from library) -->
+    <script defer src={asset_path(@conn, :js)}></script>
+
+    <!-- Theme persistence -->
+    <script>
+      (() => {
+        const saved = localStorage.getItem("phx:theme");
+        if (saved) {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+          const saved = localStorage.getItem("phx:theme");
+          if (saved) {
+            const radio = document.querySelector(`input.theme-controller[value="${saved}"]`);
+            if (radio) radio.checked = true;
+          }
+        });
+
+        document.addEventListener("change", (e) => {
+          if (e.target.classList.contains("theme-controller")) {
+            const theme = e.target.value;
+            localStorage.setItem("phx:theme", theme);
+            document.documentElement.setAttribute("data-theme", theme);
+            document.querySelectorAll("iframe").forEach((f) => {
+              f.contentWindow?.postMessage({type: "theme-change", theme: theme}, "*");
+            });
+          }
+        });
+
+        document.addEventListener("change", (e) => {
+          if (e.target.classList.contains("preview-theme")) {
+            const theme = e.target.value;
+            document.querySelectorAll("iframe").forEach((f) => {
+              f.contentWindow?.postMessage({type: "theme-change", theme: theme}, "*");
+            });
+          }
+        });
+
+        window.addEventListener("storage", (e) => {
+          if (e.key === "phx:theme" && e.newValue) {
+            document.documentElement.setAttribute("data-theme", e.newValue);
+            const radio = document.querySelector(`input.theme-controller[value="${e.newValue}"]`);
+            if (radio) radio.checked = true;
+          }
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    {@inner_content}
+  </body>
+</html>

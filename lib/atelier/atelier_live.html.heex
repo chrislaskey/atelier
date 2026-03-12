@@ -1,0 +1,415 @@
+<.flash_group flash={@flash} />
+
+<div class="flex flex-col min-h-screen">
+  <div class="w-full h-16 pl-0 pr-6 items-center flex justify-between shadow-sm relative z-10">
+    <div class="flex items-center">
+      <div class="w-full h-16 overflow-hidden">
+        <.icon name="hero-paint-brush" class="size-26 -mt-5" />
+      </div>
+      <.link class="tracking-widest text-2xl font-light text-base-800 uppercase" navigate={@mount_path}>
+        Atelier
+      </.link>
+    </div>
+    <div class="flex items-center gap-x-1">
+      <.link navigate={@mount_path} class="btn hover:btn-accent btn-ghost">
+        <.icon name="hero-plus" class="size-5" />
+        <span>New component</span>
+      </.link>
+      <.theme_selector />
+    </div>
+  </div>
+
+  <div class="flex">
+    <.sidebar components={@components} current={@current_component} mount_path={@mount_path} />
+
+    <div class="flex-1 p-12">
+      <h1 :if={@current_component} class="text-4xl mb-6">
+        <span class="font-light">
+          {@current_component |> String.trim_trailing(".ex") |> Macro.camelize()}
+        </span>
+        <span class="font-thin opacity-50">{@current_component}</span>
+      </h1>
+      <h1 :if={!@current_component} class="text-4xl mb-6">
+        <span class="font-light">New component</span>
+      </h1>
+      <.form for={@form} phx-change="validate" phx-submit="save" id="component-form">
+        <div class="tabs tabs-lift">
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="Prompt"
+            class="tab"
+            aria-label="Prompt"
+            checked={@form[:view_tabs].value == "Prompt"}
+          />
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <.input
+              type="textarea"
+              field={@form[:prompt]}
+              rows={3}
+              placeholder={
+                if @preview_document == "",
+                  do: "Describe what you want to make",
+                  else: "Describe what you want to update"
+              }
+            />
+
+            <div id="image-upload" phx-hook=".PasteUpload" class="mt-3">
+              <.live_file_input upload={@uploads.design_image} class="hidden" />
+
+              <div
+                :for={entry <- @uploads.design_image.entries}
+                class="flex items-center gap-3 p-3 border border-base-300 rounded-lg bg-base-200/50"
+              >
+                <.live_img_preview entry={entry} class="max-h-24 rounded border border-base-300" />
+                <div class="flex flex-col gap-1">
+                  <span class="text-sm text-base-content/70">{entry.client_name}</span>
+                  <button
+                    type="button"
+                    phx-click="cancel-upload"
+                    phx-value-ref={entry.ref}
+                    class="btn btn-ghost btn-xs w-fit"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <p
+                  :for={err <- upload_errors(@uploads.design_image, entry)}
+                  class="text-error text-sm"
+                >
+                  {upload_error_to_string(err)}
+                </p>
+              </div>
+
+              <div
+                :if={@uploads.design_image.entries == []}
+                phx-drop-target={@uploads.design_image.ref}
+                class="border-2 border-dashed border-base-300 rounded-lg p-4 text-center text-sm text-base-content/50"
+              >
+                Paste or drop a design image, or
+                <label class="link cursor-pointer" for={@uploads.design_image.ref}>
+                  browse
+                </label>
+              </div>
+
+              <p
+                :for={err <- upload_errors(@uploads.design_image)}
+                class="text-error text-sm mt-1"
+              >
+                {upload_error_to_string(err)}
+              </p>
+            </div>
+          </div>
+
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="Preview"
+            class="tab"
+            aria-label="Preview"
+            checked={@form[:view_tabs].value == "Preview"}
+          />
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <iframe
+              :if={@preview_document != ""}
+              srcdoc={@preview_document}
+              class="w-full min-h-64 border-0 rounded-lg"
+              sandbox="allow-scripts allow-same-origin"
+            />
+            <p :if={@preview_document == ""} class="text-base-content/50">
+              No element yet. Get started with a prompt
+            </p>
+          </div>
+
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="HTML"
+            class="tab"
+            aria-label="HTML"
+            checked={@form[:view_tabs].value == "HTML"}
+          />
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <.input type="textarea" field={@form[:html]} rows={14} />
+          </div>
+
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="Elixir"
+            class="tab"
+            aria-label="Elixir"
+            checked={@form[:view_tabs].value == "Elixir"}
+          />
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <.input type="textarea" field={@form[:elixir]} rows={14} />
+          </div>
+
+          <input
+            type="radio"
+            name={@form[:view_tabs].name}
+            value="TSX"
+            class="tab"
+            aria-label="TSX"
+            checked={@form[:view_tabs].value == "TSX"}
+          />
+          <div class="tab-content border-base-300 bg-base-100 p-6">
+            <.input type="textarea" field={@form[:tsx]} rows={14} />
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center gap-x-4 justify-between">
+          <div class="flex items-center gap-x-4">
+            <button type="submit" class="btn btn-secondary mb-2">
+              <%= if @loading || @loading_tsx do %>
+                Generating
+              <% else %>
+                Generate
+              <% end %>
+            </button>
+            <.input
+              type="select"
+              field={@form[:model]}
+              form="component-form"
+              options={Schema.models()}
+            />
+          </div>
+          <div id="form-history" phx-hook=".FormHistory">
+            <div :if={@history != []} class="flex items-center text-sm mb-2 ml-2">
+              <span class="mr-2">History</span>
+              <select name="index" phx-change="select-snapshot" class="select">
+                <option
+                  :for={{entry, index} <- Enum.with_index(@history)}
+                  value={index}
+                  selected={index == @history_index}
+                >
+                  {format_timestamp(entry["timestamp"])}
+                </option>
+              </select>
+              <button
+                :if={@history != []}
+                type="button"
+                phx-click="clear-history"
+                data-confirm="Clear all local history for this page?"
+                class="btn btn-ghost"
+              >
+                <.icon name="hero-x-circle" class="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          :if={@loading || @loading_tsx}
+          class="flex items-center gap-2 my-6 p-6 text-lg text-base-content/70 rounded-lg border border-gray-300"
+        >
+          <.icon name="hero-sparkles" class="size-6 text-yellow-500 shrink-0" />
+          <span :if={@loading == :elixir}>Generating Elixir...</span>
+          <span :if={@loading == :html}>Generating HTML...</span>
+          <span :if={@loading_tsx}>Generating TSX...</span>
+        </div>
+
+        <div
+          :if={!@loading && !@loading_tsx && has_unsaved_changes?(@history, @file_updated_at)}
+          class="flex items-center gap-2 my-6 p-6 rounded-lg border border-gray-300"
+        >
+          <.icon name="hero-check-circle" class="size-8 text-green-600 shrink-0 mt-0.5" />
+          <div class="flex flex-col">
+            <span class="text-lg text-base-content/90">
+              Unsaved updates are ready for review
+            </span>
+            <span class="text-sm text-base-content/70">
+              Review the changes above. If you're happy with it, save the component file.
+              If you're not, use the prompt or code tabs to make edits before saving.
+            </span>
+          </div>
+        </div>
+
+        <div class="my-3 flex items-center gap-x-3">
+          <button type="button" phx-click="write" class="mb-2 btn btn-primary">
+            Save updates
+          </button>
+          <.input
+            type="text"
+            field={@form[:name]}
+            form="component-form"
+            placeholder="file/path.ex"
+          />
+        </div>
+      </.form>
+
+      <div
+        :if={@file_content}
+        tabindex="0"
+        class="collapse collapse-arrow bg-base-100 border-base-300 border mt-6"
+      >
+        <div class="collapse-title font-semibold pe-12">
+          <div class="flex items-center gap-x-2">
+            <.icon name="hero-document-text" class="size-5" />
+            <span>Component file</span>
+          </div>
+        </div>
+        <div class="collapse-content text-sm">
+          <pre class="overflow-x-auto"><code>{@file_content}</code></pre>
+        </div>
+      </div>
+
+      <div class="my-8 border-b-1 border-base-300 h-1"></div>
+
+      <div :if={@component_render_fn && @component_attrs} class="mt-6 space-y-6">
+        <div
+          :for={attr <- @component_attrs.attrs}
+          :if={attr.values}
+          class="border border-base-300 rounded-lg p-4"
+        >
+          <div class="text-sm font-semibold mb-3">{attr.name}</div>
+          <div class="flex flex-wrap items-end gap-4">
+            <div :for={value <- attr.values} class="flex flex-col items-center gap-1">
+              <.dynamic_component render_fn={@component_render_fn} {%{attr.name => value}}>
+                {Phoenix.Naming.humanize(to_string(attr.name))}
+              </.dynamic_component>
+              <span class="text-xs text-base-content/50">{value}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        :if={@component_render_fn && @component_attrs}
+        class="mt-6 border border-base-300 rounded-lg p-4"
+      >
+        <div class="text-sm font-semibold mb-3">Custom preview</div>
+
+        <div class="flex gap-6">
+          <div class="flex-1 flex items-center justify-center p-4 border border-base-300 rounded-lg bg-base-100">
+            <.dynamic_component
+              render_fn={@component_render_fn}
+              {cast_preview_assigns(@preview_assigns, @component_attrs)}
+            >
+              {Map.get(@preview_assigns, "inner_block_text", "Hello")}
+            </.dynamic_component>
+          </div>
+
+          <form phx-change="preview-change" class="flex-1 space-y-2">
+            <div :for={attr <- @component_attrs.attrs} class="flex items-center gap-2">
+              <label class="text-sm w-28 text-right shrink-0">{attr.name}</label>
+              <select
+                :if={attr.values}
+                name={"preview[#{attr.name}]"}
+                class="select select-sm flex-1"
+              >
+                <option
+                  :for={v <- attr.values}
+                  value={v}
+                  selected={Map.get(@preview_assigns, to_string(attr.name)) == v}
+                >
+                  {v}
+                </option>
+              </select>
+              <input
+                :if={attr.type == :boolean}
+                type="hidden"
+                name={"preview[#{attr.name}]"}
+                value="false"
+              />
+              <input
+                :if={attr.type == :boolean}
+                type="checkbox"
+                name={"preview[#{attr.name}]"}
+                value="true"
+                checked={Map.get(@preview_assigns, to_string(attr.name)) == "true"}
+                class="checkbox checkbox-sm"
+              />
+              <input
+                :if={!attr.values && attr.type not in [:boolean, :list, :map, :any]}
+                type="text"
+                name={"preview[#{attr.name}]"}
+                value={Map.get(@preview_assigns, to_string(attr.name), "")}
+                class="input input-sm flex-1"
+              />
+              <input
+                :if={attr.type in [:list, :map, :any]}
+                type="text"
+                disabled
+                value={Map.get(@preview_assigns, to_string(attr.name), "")}
+                class="input input-sm flex-1 opacity-50"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm w-28 text-right shrink-0">inner_block</label>
+              <input
+                type="text"
+                name="preview[inner_block_text]"
+                value={Map.get(@preview_assigns, "inner_block_text", "Hello")}
+                class="input input-sm flex-1"
+              />
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".PasteUpload">
+        export default {
+          mounted() {
+            this.handlePaste = (e) => {
+              const files = e.clipboardData?.files;
+              if (!files?.length) return;
+
+              const input = this.el.querySelector("input[type=file]");
+              if (!input) return;
+
+              // Don't paste if an image is already attached
+              if (!this.el.querySelector("[phx-drop-target]")) return;
+
+              const dt = new DataTransfer();
+              for (const f of files) {
+                if (f.type.startsWith("image/")) dt.items.add(f);
+              }
+              if (dt.files.length) {
+                input.files = dt.files;
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+              }
+            };
+            window.addEventListener("paste", this.handlePaste);
+          },
+          destroyed() {
+            window.removeEventListener("paste", this.handlePaste);
+          }
+        }
+      </script>
+
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".FormHistory">
+        export default {
+          mounted() {
+            this._pathname = window.location.pathname;
+            this._loadHistory();
+
+            this.handleEvent("persist-history", ({ entries }) => {
+              const key = `atelier:history:${window.location.pathname}`;
+              localStorage.setItem(key, JSON.stringify(entries));
+            });
+          },
+          updated() {
+            if (this._pathname !== window.location.pathname) {
+              this._pathname = window.location.pathname;
+              this._loadHistory();
+            }
+          },
+          _loadHistory() {
+            const key = `atelier:history:${window.location.pathname}`;
+            const stored = localStorage.getItem(key);
+
+            try {
+              const entries = stored ? JSON.parse(stored) : [];
+              if (Array.isArray(entries)) {
+                this.pushEvent("restore-history", { entries });
+              }
+            } catch (e) {
+              console.warn("Failed to parse form history", e);
+            }
+          }
+        }
+      </script>
+    </div>
+  </div>
+</div>

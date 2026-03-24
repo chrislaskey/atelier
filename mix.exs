@@ -26,6 +26,8 @@ defmodule Atelier.MixProject do
   defp deps do
     [
       {:phoenix_live_view, "~> 1.0"},
+      {:ecto, "~> 3.12", optional: true},
+      {:req, "~> 0.5", optional: true},
       {:jason, "~> 1.2", optional: true}
     ]
   end

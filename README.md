@@ -31,6 +31,10 @@ config :atelier,
   web_module: MyAppWeb
 ```
 
+Note: By default components are written to `lib/my_app_web/components/atelier/*` directory.
+This can be configured to a different path using the `components_dir:` option in
+the runtime.exs config.
+
 #### 2. Add routes
 
 Add the Atelier route to your router:

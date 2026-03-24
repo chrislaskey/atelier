@@ -1,7 +1,7 @@
 defmodule Atelier.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
 
   def project do
     [
@@ -25,22 +25,8 @@ defmodule Atelier.MixProject do
 
   defp deps do
     [
-      {:phoenix_live_view, "~> 0.19 or ~> 1.0", phoenix_live_view_opts()},
-      {:phoenix, "~> 1.8", optional: true},
-      {:phoenix_html, "~> 4.1", optional: true},
-      {:ecto, "~> 3.12", optional: true},
-      {:req, "~> 0.5", optional: true},
-      {:jason, "~> 1.2", optional: true},
-      {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.2.0",
-       sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1,
-       optional: true},
-      # Dev/build only
-      {:esbuild, "~> 0.10", only: :dev, runtime: false}
+      {:phoenix_live_view, "~> 1.0"},
+      {:jason, "~> 1.2", optional: true}
     ]
   end
 

@@ -28,7 +28,15 @@ defmodule Atelier.MixProject do
       {:phoenix_live_view, "~> 1.0"},
       {:ecto, "~> 3.12", optional: true},
       {:req, "~> 0.5", optional: true},
-      {:jason, "~> 1.2", optional: true}
+      {:jason, "~> 1.2", optional: true},
+      {:heroicons,
+       github: "tailwindlabs/heroicons",
+       tag: "v2.2.0",
+       sparse: "optimized",
+       app: false,
+       compile: false,
+       depth: 1,
+       optional: true},
     ]
   end
 

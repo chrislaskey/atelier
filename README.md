@@ -1,18 +1,48 @@
 # Atelier
 
-To start your Phoenix server:
+### Installation
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+Add `atlier` to your dependencies in `mix.exs`:
 
-Now you can visit [`localhost:4001`](http://localhost:4001) from your browser.
+```elixir
+def deps do
+  [
+    {:atelier, git: "https://github.com/chrislaskey/atelier", branch: "main"},
+  ]
+end
+```
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+Then fetch dependencies:
 
-## Learn more
+```bash
+mix deps.get
+```
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+### Setup
+
+#### 1. Update config
+
+Add to `config/runtime.exs`:
+
+```elixir
+# config/runtime.exs
+config :atelier,
+  anthropic_api_key: System.get_env("ANTHROPIC_API_KEY"),
+  web_module: MyAppWeb
+```
+
+#### 2. Add routes
+
+Add the Atelier route to your router:
+
+```elixir
+# lib/my_app_web/router.ex
+import Atelier.Router
+
+scope "/" do
+  pipe_through :browser
+  atelier "/atelier"
+end
+```
+
+Visit `/atelier` in your browser to see the Atelier interface.
